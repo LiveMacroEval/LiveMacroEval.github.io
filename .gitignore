@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Secrets — never commit API keys
+.env
+.env.*
+*.key
+credentials.json
+
+# Licensed third-party inputs, mirrored from the code repo (see
+# https://github.com/LiveMacroEval/LiveMacroEval/blob/main/DATA_SOURCES.md).
+# Nothing derived from these may enter this repo beyond the aggregate figures
+# and tables already in docs/. tools/check_release_safety.py verifies these
+# patterns are still present.
+Results/bloomberg_consensus/
+Results/data_sp500futures/
+Results/data_consensus/investing_us_calendar_*.csv
+Results/ground_truth/data/investing_us_calendar_*.csv
+Results/market_surprise_capture_score/**/bloomberg_overlay/
+Results/market_surprise_capture_score/**/huber_final/
+Results/benchmark_econ/results_targets_*/
