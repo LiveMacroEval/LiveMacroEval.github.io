@@ -1,7 +1,7 @@
 {
-  "_comment": "Single source of truth for every number rendered on the site. Edit this file (and swap the PNGs in assets/figures/) on each biweekly refresh; nothing else needs to change.",
-  "last_updated": "2026-08-27",
-  "next_update": "2026-09-10",
+  "_comment": "Single source of truth for every number rendered on the site. Edit this file (and swap the PNGs in assets/figures/) on each monthly refresh; nothing else needs to change.",
+  "last_updated": "2026-08-25",
+  "next_update": "2026-09-25",
   "headline": {
     "title": "LiveMacro Score \u2014 headline evaluation",
     "window": "Target reference periods Nov 2025 \u2013 Mar 2026 (official releases Dec 1, 2025 \u2013 May 5, 2026)",

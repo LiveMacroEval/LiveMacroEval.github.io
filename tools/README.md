@@ -87,7 +87,7 @@ cd docs && python3 -m http.server 8000
 Serve it — don't open `index.html` via `file://`, or the browser blocks the
 `fetch()` of `leaderboard.json` and the tables stay empty.
 
-## The biweekly refresh
+## The monthly refresh
 
 1. Run the pipeline in your private checkout, per its `UPDATE_PIPELINE.md`.
    That produces a new dated overlay, e.g. `investing_overlay_0906/`.

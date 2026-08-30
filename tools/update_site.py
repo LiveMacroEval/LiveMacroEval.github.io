@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh the LiveMacroEval website from the Results pipeline outputs.
 
-Run after the biweekly data refresh (see the private Results/UPDATE_PIPELINE.md).
+Run after the monthly data refresh (see the private Results/UPDATE_PIPELINE.md).
 Rewrites docs/data/leaderboard.json and re-copies the paper figures. The site
 renders every number from that JSON, so this is the only step.
 
@@ -135,7 +135,7 @@ def main() -> None:
                     help="overlay dir under %s (default: %%(default)s)" % SCORING_SUBPATH)
     ap.add_argument("--window", default=None, help="override the headline window caption")
     ap.add_argument("--next-update", default=None,
-                    help="YYYY-MM-DD of the next refresh (default: today + 14 days)")
+                    help="YYYY-MM-DD of the next refresh (default: today + 30 days)")
     ap.add_argument("--skip-figures", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print the JSON, write nothing")
     args = ap.parse_args()
@@ -160,7 +160,7 @@ def main() -> None:
 
     today = dt.date.today()
     data["last_updated"] = today.isoformat()
-    data["next_update"] = args.next_update or (today + dt.timedelta(days=14)).isoformat()
+    data["next_update"] = args.next_update or (today + dt.timedelta(days=30)).isoformat()
 
     if args.dry_run:
         print(json.dumps(data["headline"], indent=2))

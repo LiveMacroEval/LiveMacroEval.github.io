@@ -3,6 +3,15 @@
 
 const fmt = (v, d = 3) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
 
+/* '2026-08-25' -> 'Aug 25, 2026'. Parsed as UTC so the label does not slip a
+   day for viewers west of Greenwich. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? `${MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : (iso || '—');
+}
+
 function scoreCell(v) {
   const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : '';
   return `<span class="score ${cls}">${fmt(v)}</span>`;
@@ -71,8 +80,8 @@ function renderFed(list) {
 fetch('data/leaderboard.json?v=' + Date.now())
   .then(r => r.json())
   .then(d => {
-    document.getElementById('last-updated').textContent = d.last_updated;
-    document.getElementById('next-update').textContent = d.next_update;
+    document.getElementById('last-updated').textContent = fmtDate(d.last_updated);
+    document.getElementById('next-update').textContent = fmtDate(d.next_update);
     renderHeadline(d.headline);
     renderAgentDesign(d.agent_design);
     renderIndicators(d.indicators);

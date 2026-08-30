@@ -5,7 +5,7 @@ benchmark: a live, contamination-resistant evaluation of LLM agents on
 nowcasting sixteen U.S. headline macroeconomic indicators.
 
 - **Code and data release:** https://github.com/LiveMacroEval/LiveMacroEval
-- **Leaderboard:** refreshed every two weeks
+- **Leaderboard:** refreshed every month
 
 ## Layout
 
@@ -20,7 +20,7 @@ number the site displays. Several of the pipeline's inputs are licensed and
 cannot be redistributed, so `tools/check_release_safety.py` enforces an
 allowlist over `docs/` on every commit and every push. See
 [tools/README.md](tools/README.md) for how that works and how to run the
-biweekly refresh.
+monthly refresh.
 
 ## Citation
 
