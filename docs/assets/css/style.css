@@ -131,9 +131,13 @@ h1.title span { color: var(--accent-ink); }
   font-weight: 400; color: var(--fg); margin: 0 auto 16px; max-width: 30em;
 }
 
-.btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+/* the three links read as one strip: equal-width tabs with a lighter contour,
+   the row still spanning the width the longer labels used to need */
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+          max-width: 460px; margin: 0 auto; }
 .btn {
-  display: inline-flex; align-items: center; padding: 9px 17px; border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0;
+  padding: 6px 12px; border-radius: 3px;
   border: 1px solid var(--fg); background: var(--bg-card); color: var(--fg);
   text-decoration: none; font-family: var(--text); font-size: 13.5px; font-weight: 600;
   transition: .15s;
@@ -146,7 +150,7 @@ h1.title span { color: var(--accent-ink); }
 /* ---------- live strip ---------- */
 .livestrip {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  gap: 8px 28px; margin: 22px auto 0; padding: 10px 0; max-width: 760px;
+  gap: 8px 28px; margin: 22px auto 0; padding: 10px 0; max-width: 660px;
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   font-family: var(--text); font-size: 13px; color: var(--fg-muted);
 }
@@ -269,7 +273,7 @@ figure img { width: 100%; height: auto; display: block; border: 1px solid var(--
 figure.plain img { border: none; background: none; }
 /* the pipeline figure sits directly under the banner, so it and its note are
    part of the hero: centred, and the note keeps the standfirst's size */
-.hero-fig { margin: 26px auto 0; }
+.hero-fig { margin: 48px auto 0; }
 .hero-fig figcaption {
   font-size: 19px; line-height: 1.5; color: var(--fg);
   text-align: center; margin: 16px auto 0; max-width: 44em;
