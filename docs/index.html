@@ -10,7 +10,7 @@
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -20,10 +20,11 @@
     <div class="brand"><span>Live</span>MacroEval</div>
     <div class="navlinks">
       <a href="#why">Why</a>
-      <a href="#task">Task</a>
+      <a href="#indicators">Indicators</a>
       <a href="#leaderboard">Leaderboard</a>
       <a href="#metrics">Scoring</a>
-      <a href="#results">Results</a>
+      <a href="#themes">Themes</a>
+      <a href="#betting">LiveBetting</a>
       <a href="#cite">Cite</a>
     </div>
   </div>
@@ -34,8 +35,6 @@
     <h1 class="title"><span>Live</span>MacroEval</h1>
     <p class="papertitle">Can LLMs Take the Pulse of the Economy? A
       <em class="hl">Real-Time</em> Evaluation of LLM Nowcasts on Macroeconomic Indicators</p>
-    <p class="subtitle">LLM agents nowcast sixteen U.S. macro indicators in real time. We score them
-      against the equity market, prediction markets, and professional economists.</p>
 
     <div class="btnrow">
       <!-- TODO: paste the paper URL into href and drop class="disabled". -->
@@ -55,39 +54,37 @@
 
 <section id="why">
   <div class="wrap">
-    <h2>Why a live benchmark?</h2>
-    <p>Nowcasting is estimating an indicator before its official release. Central banks staff whole
-      teams to do it.</p>
-    <ul class="rules">
-      <li>LLM agents pair broad world knowledge with live web search.</li>
-      <li>They can be queried hourly. Institutional nowcasts update weekly at best.</li>
-    </ul>
-    <p><b class="hl">The contamination problem.</b> GDP and CPI are among the most reported numbers
-      on earth, so their past values are almost certainly memorized in pretraining. Testing on past
-      releases measures recall, not nowcasting.</p>
-    <p>LiveMacroEval scores only nowcasts made <em>before</em> the release. Contamination-free by
-      construction — and it keeps running, which is why these numbers move.</p>
-  </div>
-</section>
+    <p class="lead">LLM agents nowcast sixteen U.S. macro indicators in real time. We score them
+      against the equity market, prediction markets, and professional economists.</p>
 
-<section id="task">
-  <div class="wrap">
-    <h2>The task</h2>
+    <h2>Why a live benchmark?</h2>
+    <p>Nowcasting means estimating an indicator before it is officially released. Central banks staff
+      whole teams to do it, and an LLM agent can be asked far more often than any of them.</p>
+    <p>The catch is contamination. GDP and CPI are among the most reported numbers on earth, so their
+      past values are almost certainly memorized during pretraining, and testing on old releases
+      measures recall rather than nowcasting. LiveMacroEval scores only nowcasts made before the
+      release, which keeps it clean by construction.</p>
+
     <figure class="plain">
       <img src="assets/figures/pipeline_overview.png" alt="LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines">
       <figcaption>Sixteen indicators, hourly nowcasts across the pre-release window, two
-        market-grounded scores.</figcaption>
+        market-grounded scores. The window opens in the final week of the reference month and closes
+        at the official release, weeks to months later. The agent decides when to search, and what to
+        search for.</figcaption>
     </figure>
-    <ul class="rules">
-      <li>The window <b>opens</b> in the final week of the reference month.</li>
-      <li>It <b>closes</b> at the official release — weeks to months later.</li>
-      <li>The agent decides when to search, and what to search for.</li>
-    </ul>
+  </div>
+</section>
 
-    <h3>The sixteen indicators</h3>
+<section id="indicators">
+  <div class="wrap">
+    <h2>The sixteen indicators</h2>
     <div class="grid g4" id="ind-grid"></div>
+  </div>
+</section>
 
-    <h3>Who we compare against</h3>
+<section id="baselines">
+  <div class="wrap">
+    <h2>Who we compare against</h2>
     <div class="grid g2">
       <div class="card">
         <span class="tag">Human experts</span>
@@ -98,13 +95,10 @@
       <div class="card">
         <span class="tag">Consensus &amp; econometrics</span>
         <h4>Bloomberg ECOS and auto-ARIMA</h4>
-        <p class="blurb">The professional consensus, plus a time-series baseline.</p>
-        <ul>
-          <li><a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
-              ECOS</a> — the professional economist consensus, across all sixteen indicators. Famously
-              hard to beat.</li>
-          <li><b>auto-ARIMA</b> — univariate, refit each window.</li>
-        </ul>
+        <p class="cardp"><a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
+          ECOS</a> is the professional economist consensus, covering all sixteen indicators, and it is
+          famously hard to beat. auto-ARIMA is a univariate time-series baseline, refit at the start
+          of every window.</p>
       </div>
     </div>
   </div>
@@ -124,8 +118,12 @@
       </table>
     </div>
     <p class="note" id="lb-note">—</p>
+  </div>
+</section>
 
-    <h3>Tool and agent design</h3>
+<section id="agents">
+  <div class="wrap">
+    <h2>Tool and agent design</h2>
     <div class="tablewrap" style="max-width:520px">
       <table class="narrow">
         <thead><tr><th>Configuration</th><th class="num">LiveMacro</th></tr></thead>
@@ -139,72 +137,74 @@
 <section id="metrics">
   <div class="wrap">
     <h2>How we score</h2>
-    <p>Plain error on the released level ignores that indicators differ in economic weight. We use
-      two market-grounded scores instead.</p>
-
+    <p>Plain error on the released level ignores that indicators differ in economic weight. We use two
+      market-grounded scores instead. Full definitions and estimation are in the paper.</p>
     <div class="grid g2">
       <div class="card">
         <span class="tag">Metric 1</span>
         <h4>LiveMacro Score</h4>
-        <p class="blurb">Does the nowcast explain how the market moved?</p>
-        <ul class="rules">
-          <li>Macro surprises move equity prices.</li>
-          <li>We weight each indicator by its measured effect on S&amp;P 500 futures at the release.</li>
-          <li><b>+1</b> perfect · <b>0</b> ties the consensus · <b>−1</b> worse.</li>
-        </ul>
-        <p class="fine">Sixteen accuracies collapse into one comparable number.</p>
+        <p class="cardp">Macro surprises move equity prices. We weight each indicator by its measured
+          effect on S&amp;P 500 futures at the moment of release, so sixteen accuracies collapse into
+          one comparable number. <b>+1</b> is perfect, <b>0</b> ties the consensus, <b>−1</b> is
+          arbitrarily worse.</p>
       </div>
       <div class="card">
         <span class="tag">Metric 2</span>
         <h4>LiveBetting Score</h4>
-        <p class="blurb">If you traded the nowcast, would you make money?</p>
-        <ul class="rules">
-          <li>Every hour before the release, bet $1 on the bucket holding the latest nowcast.</li>
-          <li>Prices are the crowd's odds, so liquidity is priced in.</li>
-          <li>Beating a confident crowd pays a lot; agreeing with it pays little.</li>
-        </ul>
-        <p class="fine">Unit-free, so it aggregates across very different indicators.</p>
+        <p class="cardp">Every hour before a release we bet $1 on the prediction-market bucket holding
+          the agent's latest nowcast. Prices are the crowd's own odds, so liquidity is priced in:
+          beating a confident crowd pays a lot, agreeing with it pays little. The score is unit-free,
+          so it aggregates across very different indicators.</p>
       </div>
     </div>
-    <p class="note">Full definitions, estimation and caveats are in the paper.</p>
   </div>
 </section>
 
-<section id="results">
+<section id="themes">
   <div class="wrap">
-    <h2>Results</h2>
-    <p>Six months live. The top agent ties the professional consensus overall — but the aggregate
+    <h2>Where the skill is</h2>
+    <p>Six months live. The top agent ties the professional consensus overall, but that aggregate
       hides sharp differences across the economy.</p>
-
-    <h3>By theme</h3>
     <div class="tablewrap">
-      <table>
+      <table class="themetable">
         <thead><tr id="th-head"></tr></thead>
         <tbody id="th-body"></tbody>
       </table>
     </div>
     <p class="note" id="th-note">—</p>
-    <ul class="rules">
-      <li><b>Above consensus</b> on Supply &amp; Production and Housing, which lean on
-          higher-frequency components that reward updating inside the window.</li>
-      <li><b>Below consensus</b> on Demand &amp; Inflation, where anchored expectations protect the
-          professionals.</li>
-      <li><b>Flat</b> on the Labor Market — a signal-to-noise ceiling on the household survey.</li>
-    </ul>
+    <p>Agents beat the consensus on Supply &amp; Production and on Housing, both of which lean on
+      higher-frequency components that reward updating inside the window. They fall behind on Demand
+      &amp; Inflation, where well-anchored expectations protect the professionals. The Labor Market
+      sits near zero for every model, consistent with a signal-to-noise ceiling on the household
+      survey.</p>
+  </div>
+</section>
 
-    <h3>LiveBetting: trading against the Fed</h3>
-    <div class="markets" id="bet-grid"></div>
-    <p class="note" id="bet-note">—</p>
+<section id="betting">
+  <div class="wrap">
+    <h2>LiveBetting: trading against the Fed</h2>
+    <p>On real GDP four agents finish the window with positive cumulative returns, and three beat the
+      Atlanta Fed, with only the New York Fed ahead. On the unemployment rate the leading agent
+      finishes above the Chicago Fed.</p>
+    <p>CPI is the exception. The Cleveland Fed and the Bloomberg consensus still beat every agent —
+      a real limit on indicators where institutional models are tuned to known economic structure.</p>
 
-    <h3>Case study: watching a belief update</h3>
-    <ul class="rules">
-      <li>GPT-5's March 2026 CPI nowcast sits near 2.7% through early April.</li>
-      <li>On April 8 it jumps to about 3%, then tracks the realized print.</li>
-      <li>Two scheduled events land in that window: a large gasoline-inventory drawdown, and FOMC
-          minutes flagging upside inflation risk.</li>
-    </ul>
+    <figure><img src="assets/figures/continuous_returns_real_gdp_qoq_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on real GDP, by model and Fed nowcast"><figcaption><b>Real GDP</b> — cumulative LiveBetting return across the February and March windows.</figcaption></figure>
+    <figure><img src="assets/figures/continuous_returns_unemployment_rate_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on the unemployment rate"><figcaption><b>Unemployment rate</b> — cumulative LiveBetting return.</figcaption></figure>
+    <figure><img src="assets/figures/continuous_returns_cpi_yoy_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on CPI"><figcaption><b>CPI</b> — cumulative LiveBetting return.</figcaption></figure>
+  </div>
+</section>
+
+<section id="case">
+  <div class="wrap">
+    <h2>Watching a belief update</h2>
+    <p>GPT-5's March 2026 CPI nowcast sits near 2.7% through early April, then jumps to about 3% on
+      April 8 and tracks the realized print from there. Two scheduled events land inside that window:
+      a large gasoline-inventory drawdown, and FOMC minutes flagging upside inflation risk. The size
+      of the revision matches a back-of-the-envelope gasoline contribution under BLS expenditure
+      weights.</p>
     <figure><img src="assets/figures/case_study_cpi_yoy_2026_03.png" alt="GPT-5 nowcasts for March 2026 CPI"><figcaption><b>March 2026 CPI.</b> The dashed line marks 10:30 ET, April 8, 2026.</figcaption></figure>
-    <figure><img src="assets/figures/case_study_pce_mom_2026_03.png" alt="GPT-5 nowcasts for March 2026 PCE price index"><figcaption><b>March 2026 PCE price index</b> — the same shift, same window.</figcaption></figure>
+    <figure><img src="assets/figures/case_study_pce_mom_2026_03.png" alt="GPT-5 nowcasts for March 2026 PCE price index"><figcaption><b>March 2026 PCE price index</b> — the same shift, in the same window.</figcaption></figure>
   </div>
 </section>
 

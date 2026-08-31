@@ -6,7 +6,6 @@
    positive, and both the consensus reference and a tied theme score are 0. */
 const sign = v => (v === 0 ? '' : v > 0 ? '+' : '−');
 const fmt = (v, d = 3) => sign(v) + Math.abs(v).toFixed(d);
-const pct = v => sign(v) + Math.abs(v).toFixed(1) + '%';
 const cls = v => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
 
 /* '2026-08-25' -> 'Aug 25, 2026'. Parsed by hand so the label cannot slip a
@@ -87,25 +86,6 @@ function renderThemes(t) {
   document.getElementById('th-note').textContent = `${t.window} ${t.note}`;
 }
 
-/* One small table per prediction market. */
-function renderBetting(b) {
-  document.getElementById('bet-grid').innerHTML = b.markets.map(m => {
-    const max = Math.max(...m.rows.map(r => Math.abs(r.ret))) || 1;
-    return `<div class="market">
-      <h4>${esc(m.label)}</h4>
-      <div class="tablewrap"><table class="narrow">
-        <thead><tr><th>Arm</th><th class="num">Return</th><th class="barcell"></th></tr></thead>
-        <tbody>${m.rows.map(r => `
-          <tr><td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${
-            r.kind === 'human' ? 'Human' : 'LLM'}</span></td>
-          <td class="num"><span class="score ${cls(r.ret)}">${pct(r.ret)}</span></td>
-          <td class="barcell">${bar(r.ret, max)}</td></tr>`).join('')}
-        </tbody>
-      </table></div></div>`;
-  }).join('');
-  document.getElementById('bet-note').textContent = `${b.window} ${b.note}`;
-}
-
 function renderIndicators(list) {
   document.getElementById('ind-grid').innerHTML = list.map(t => `
     <div class="card">
@@ -129,7 +109,6 @@ fetch('data/leaderboard.json?v=' + Date.now())
     renderHeadline(d.headline);
     renderAgentDesign(d.agent_design);
     renderThemes(d.themes);
-    renderBetting(d.betting);
     renderIndicators(d.indicators);
     renderFed(d.comparators.fed);
   })
