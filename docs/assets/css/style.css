@@ -90,10 +90,6 @@ a { color: var(--accent-ink); text-underline-offset: 2px; }
 a:hover { color: var(--warm-ink); }
 strong, b { font-weight: 600; }
 .hl { font-style: normal; color: var(--warm-ink); }
-/* The standfirst that opens the page, above the first heading.
-   Named "standfirst", not "lead": the leaderboard's leading row already uses
-   tr.lead, and a bare .lead rule leaks its font-size into that row. */
-.standfirst { font-size: 20px; line-height: 1.55; color: var(--fg); margin: 0 0 34px; }
 /* keep the highlighted phrase on one line so the hyphen never breaks */
 .papertitle .hl { white-space: nowrap; }
 
@@ -124,15 +120,15 @@ nav .navlinks { display: flex; gap: 22px; }
 @media (max-width: 780px) { nav .navlinks { display: none; } }
 
 /* ---------- hero ---------- */
-header.hero { padding: 72px 0 44px; }
+header.hero { padding: 40px 0 40px; }
 h1.title {
-  font-family: var(--display); font-size: clamp(52px, 10vw, 116px); line-height: 1.0;
-  letter-spacing: -0.018em; margin: 0 0 22px; font-weight: 600;
+  font-family: var(--display); font-size: clamp(40px, 6.4vw, 76px); line-height: 1.03;
+  letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 600;
 }
 h1.title span { color: var(--accent-ink); }
 .papertitle {
-  font-family: var(--display); font-size: clamp(20px, 2.7vw, 28px); line-height: 1.32;
-  font-weight: 400; color: var(--fg); margin: 0 auto 20px; max-width: 26em;
+  font-family: var(--display); font-size: clamp(17px, 2vw, 22px); line-height: 1.3;
+  font-weight: 400; color: var(--fg); margin: 0 auto 16px; max-width: 30em;
 }
 
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -150,7 +146,7 @@ h1.title span { color: var(--accent-ink); }
 /* ---------- live strip ---------- */
 .livestrip {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  gap: 8px 28px; margin: 34px auto 0; padding: 13px 0; max-width: 760px;
+  gap: 8px 28px; margin: 22px auto 0; padding: 10px 0; max-width: 760px;
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   font-family: var(--text); font-size: 13px; color: var(--fg-muted);
 }
@@ -271,6 +267,13 @@ td.cell { text-align: right; font-variant-numeric: tabular-nums; white-space: no
 figure { margin: 0 auto 28px; }
 figure img { width: 100%; height: auto; display: block; border: 1px solid var(--border); background: #fff; }
 figure.plain img { border: none; background: none; }
+/* the pipeline figure sits directly under the banner, so it and its note are
+   part of the hero: centred, and the note keeps the standfirst's size */
+.hero-fig { margin: 26px auto 0; }
+.hero-fig figcaption {
+  font-size: 19px; line-height: 1.5; color: var(--fg);
+  text-align: center; margin: 16px auto 0; max-width: 44em;
+}
 figcaption {
   font-family: var(--text); font-size: 14.5px; color: var(--fg-muted);
   margin: 12px 0 0; line-height: 1.6; text-align: left;

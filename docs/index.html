@@ -49,14 +49,17 @@
       <span><span class="k">Next refresh</span> <b id="next-update">—</b></span>
       <span><span class="k">Updating frequency</span> <b>Monthly</b></span>
     </div>
+
+    <figure class="plain hero-fig">
+      <img src="assets/figures/pipeline_overview.png" alt="LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines">
+      <figcaption>LLM agents nowcast sixteen U.S. macro indicators in real time. We score them
+        against the equity market, prediction markets, and professional economists.</figcaption>
+    </figure>
   </div>
 </header>
 
 <section id="why">
   <div class="wrap">
-    <p class="standfirst">LLM agents nowcast sixteen U.S. macro indicators in real time. We score them
-      against the equity market, prediction markets, and professional economists.</p>
-
     <h2>Why a live benchmark?</h2>
     <p><b class="hl">Nowcasting</b> means estimating an indicator before it is officially released.
       Central banks staff whole teams to do it, and an LLM agent can be asked far more often than any
@@ -68,13 +71,6 @@
     <p><b class="hl">LiveMacroEval</b> scores only nowcasts made before the release, which keeps it
       clean by construction.</p>
 
-    <figure class="plain">
-      <img src="assets/figures/pipeline_overview.png" alt="LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines">
-      <figcaption>Sixteen indicators, hourly nowcasts across the pre-release window, two
-        market-grounded scores. The window opens in the final week of the reference month and closes
-        at the official release, weeks to months later. The agent decides when to search, and what to
-        search for.</figcaption>
-    </figure>
   </div>
 </section>
 
@@ -223,6 +219,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260831"></script>
+<script src="assets/js/main.js?v=20260831b"></script>
 </body>
 </html>
