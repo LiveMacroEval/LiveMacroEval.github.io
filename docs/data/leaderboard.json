@@ -260,26 +260,30 @@
   },
   "agent_design": {
     "title": "Tool and agent design",
-    "window": "May \u2013 Aug 2026, separate live window",
-    "note": "Same base model (Claude-4.5-Sonnet) and live protocol. Scores in this table are comparable only to each other, not to the headline table above \u2014 a different window and a different consensus source.",
+    "window": "Separate live window, May - Aug 2026.",
+    "note": "Same base model (Claude-4.5-Sonnet) and live protocol. These rows share the metric but not the window or the consensus source, so they are comparable only to each other, not to the headline rows above.",
     "rows": [
       {
-        "name": "plain prompt (control)",
-        "score": -0.08
-      },
-      {
-        "name": "+ financial plug-in",
-        "score": -0.055
+        "name": "consensus baseline",
+        "score": 0.0,
+        "note": "0 by construction",
+        "kind": "human"
       },
       {
         "name": "+ multi-agent team",
         "score": 0.02,
-        "best": true
+        "best": true,
+        "kind": "llm"
       },
       {
-        "name": "consensus baseline",
-        "score": 0.0,
-        "note": "0 by construction"
+        "name": "+ financial plug-in",
+        "score": -0.055,
+        "kind": "llm"
+      },
+      {
+        "name": "plain prompt (control)",
+        "score": -0.08,
+        "kind": "llm"
       }
     ]
   },

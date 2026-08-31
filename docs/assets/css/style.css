@@ -90,8 +90,10 @@ a { color: var(--accent-ink); text-underline-offset: 2px; }
 a:hover { color: var(--warm-ink); }
 strong, b { font-weight: 600; }
 .hl { font-style: normal; color: var(--warm-ink); }
-/* the standfirst that opens the page, above the first heading */
-.lead { font-size: 20px; line-height: 1.55; color: var(--fg); margin: 0 0 34px; }
+/* The standfirst that opens the page, above the first heading.
+   Named "standfirst", not "lead": the leaderboard's leading row already uses
+   tr.lead, and a bare .lead rule leaks its font-size into that row. */
+.standfirst { font-size: 20px; line-height: 1.55; color: var(--fg); margin: 0 0 34px; }
 /* keep the highlighted phrase on one line so the hyphen never breaks */
 .papertitle .hl { white-space: nowrap; }
 
@@ -154,7 +156,7 @@ h1.title span { color: var(--accent-ink); }
 }
 .livestrip .k { text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px;
                 font-weight: 700; color: var(--fg-muted); }
-.livestrip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.livestrip b { color: var(--accent-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
   display: inline-block; margin-right: 7px; vertical-align: 1px;
@@ -217,6 +219,14 @@ thead th {
 tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr.ref td { background: var(--bg-soft); }
+/* caption row separating the two panels of the leaderboard */
+tbody tr.grouphdr td {
+  background: var(--bg-soft); border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--fg); padding: 9px 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--fg-muted);
+}
+tbody tr.grouphdr:first-child td { border-top: none; }
 tbody tr.lead td { background: var(--accent-soft); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .score { font-variant-numeric: tabular-nums; }

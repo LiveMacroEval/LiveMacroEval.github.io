@@ -42,34 +42,52 @@ function cellBar(v, max) {
   return `<span class="cellbar"><i class="${v >= 0 ? 'pos' : 'neg'}" style="${side}"></i></span>`;
 }
 
-function renderHeadline(h) {
-  const max = Math.max(...h.rows.map(r => Math.abs(r.score))) || 1;
-  const best = Math.max(...h.rows.filter(x => x.kind === 'llm').map(x => x.score));
-  let rank = 0;
-  document.getElementById('lb-body').innerHTML = h.rows.map(r => {
-    const isRef = r.ci === null && r.score === 0;
-    if (!isRef) rank++;
-    const kindLabel = { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || '';
-    return `<tr class="${isRef ? 'ref' : (r.kind === 'llm' && r.score === best) ? 'lead' : ''}">
-      <td class="rank">${isRef ? '—' : rank}</td>
-      <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${kindLabel}</span>
-          ${r.note ? `<span class="rownote">${esc(r.note)}</span>` : ''}</td>
-      <td class="num">${scoreCell(r.score)}</td>
-      <td class="num ci">${r.ci ? `[${fmt(r.ci[0])}, ${fmt(r.ci[1])}]` : '—'}</td>
-      <td class="num ci">${r.events ?? '—'}</td>
-      <td class="barcell">${bar(r.score, max)}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('lb-note').textContent = `${h.window} ${h.note}`;
+/* One row, used by both panels of the leaderboard. Agent-design rows have no
+   CI or event count, so those cells fall back to an em dash. */
+function leaderRow(r, rank, isRef, isLead, max) {
+  const kindLabel = { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || '';
+  return `<tr class="${isRef ? 'ref' : isLead ? 'lead' : ''}">
+    <td class="rank">${isRef ? '—' : rank}</td>
+    <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${kindLabel}</span>
+        ${r.note ? `<span class="rownote">${esc(r.note)}</span>` : ''}</td>
+    <td class="num">${scoreCell(r.score)}</td>
+    <td class="num ci">${r.ci ? `[${fmt(r.ci[0])}, ${fmt(r.ci[1])}]` : '—'}</td>
+    <td class="num ci">${r.events ?? '—'}</td>
+    <td class="barcell">${bar(r.score, max)}</td>
+  </tr>`;
 }
 
-function renderAgentDesign(a) {
-  document.getElementById('ad-note').textContent = `${a.window}. ${a.note}`;
-  document.getElementById('ad-body').innerHTML = a.rows.map(r => `
-    <tr class="${r.best ? 'lead' : ''}">
-      <td><span class="rowname">${esc(r.name)}</span>${r.note ? `<span class="rownote">${esc(r.note)}</span>` : ''}</td>
-      <td class="num">${scoreCell(r.score)}</td>
-    </tr>`).join('');
+function panelHeader(label) {
+  return `<tr class="grouphdr"><td colspan="6">${esc(label)}</td></tr>`;
+}
+
+/* The headline evaluation and the agent-design experiment render as two
+   panels of a single table. They share the metric and the bar scale, but not
+   the window or the consensus source -- hence the panel captions. */
+function renderLeaderboard(h, a) {
+  const all = [...h.rows.map(r => r.score), ...a.rows.map(r => r.score)];
+  const max = Math.max(...all.map(Math.abs)) || 1;
+  const html = [];
+
+  html.push(panelHeader(h.window));
+  const bestH = Math.max(...h.rows.filter(x => x.kind === 'llm').map(x => x.score));
+  let rank = 0;
+  for (const r of h.rows) {
+    const isRef = r.ci === null && r.score === 0;
+    if (!isRef) rank++;
+    html.push(leaderRow(r, rank, isRef, r.kind === 'llm' && r.score === bestH, max));
+  }
+
+  html.push(panelHeader(`${a.title} — ${a.window}`));
+  rank = 0;
+  for (const r of a.rows) {
+    const isRef = r.kind === 'human';
+    if (!isRef) rank++;
+    html.push(leaderRow(r, rank, isRef, !!r.best, max));
+  }
+
+  document.getElementById('lb-body').innerHTML = html.join('');
+  document.getElementById('lb-note').textContent = `${h.note} ${a.note}`;
 }
 
 /* Models down the side, themes across the top. */
@@ -106,8 +124,7 @@ fetch('data/leaderboard.json?v=' + Date.now())
   .then(d => {
     document.getElementById('last-updated').textContent = fmtDate(d.last_updated);
     document.getElementById('next-update').textContent = fmtDate(d.next_update);
-    renderHeadline(d.headline);
-    renderAgentDesign(d.agent_design);
+    renderLeaderboard(d.headline, d.agent_design);
     renderThemes(d.themes);
     renderIndicators(d.indicators);
     renderFed(d.comparators.fed);

@@ -84,7 +84,9 @@ N = (int, float)
 
 ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events": "int_or_null",
        "note?": S}
-AGENT_ROW = {"name": S, "score": N, "best?": bool, "note?": S}
+# Agent-design rows render in the same table as the headline rows, so they
+# carry the same "kind" badge. They have no CI or event count of their own.
+AGENT_ROW = {"name": S, "score": N, "kind?": S, "best?": bool, "note?": S}
 # One aggregate LiveMacro Score per model per theme -- 4 numbers a row, the same
 # shape as the paper's Figure 3 panels. No per-release value can ride along.
 THEME_ROW = {"name": S, "kind": S, "scores": [N]}
