@@ -85,6 +85,13 @@ N = (int, float)
 ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events": "int_or_null",
        "note?": S}
 AGENT_ROW = {"name": S, "score": N, "best?": bool, "note?": S}
+# One aggregate LiveMacro Score per model per theme -- 4 numbers a row, the same
+# shape as the paper's Figure 3 panels. No per-release value can ride along.
+THEME_ROW = {"name": S, "kind": S, "scores": [N]}
+# One final cumulative LiveBetting return per arm per market. The hourly series
+# behind it (>1,400 points per window) stays in the private checkout; only its
+# last value is published.
+BET_ROW = {"name": S, "kind": S, "ret": N, "note?": S}
 SCHEMA = {
     "_comment?": S,
     "last_updated": "date",
@@ -92,8 +99,13 @@ SCHEMA = {
     "headline": {"title": S, "window": S, "note": S, "source": S,
                  "rows": [ROW]},
     "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW]},
-    "indicators": [{"theme": S, "blurb": S, "items": [S]}],
-    "comparators": {"fed": [{"name": S, "target": S}]},
+    "themes": {"title": S, "window": S, "note": S,
+               "columns": [S], "rows": [THEME_ROW]},
+    "betting": {"title": S, "window": S, "note": S,
+                "markets": [{"label": S, "rows": [BET_ROW]}]},
+    # Each indicator carries a link to the agency that publishes it.
+    "indicators": [{"theme": S, "blurb": S, "items": [{"name": S, "url": S}]}],
+    "comparators": {"fed": [{"name": S, "target": S, "url": S}]},
 }
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
