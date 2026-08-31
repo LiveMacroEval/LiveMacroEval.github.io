@@ -17,6 +17,18 @@ function fmtDate(iso) {
   return m ? `${MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : (iso || '—');
 }
 
+/* index.html and main.js are cached independently by Pages (max-age=600), so a
+   browser can briefly hold a new page with a stale script, or the reverse. A
+   renderer that assumed its element existed threw on null and the catch below
+   replaced the leaderboard with a "could not load" message. Look elements up
+   through byId instead: a missing one skips its own block and leaves the rest
+   of the page intact. */
+function byId(id) {
+  const el = document.getElementById(id);
+  if (!el) console.warn(`LiveMacroEval: #${id} is missing; skipping that block.`);
+  return el;
+}
+
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -65,6 +77,8 @@ function panelHeader(label) {
    panels of a single table. They share the metric and the bar scale, but not
    the window or the consensus source -- hence the panel captions. */
 function renderLeaderboard(h, a) {
+  const body = byId('lb-body');
+  if (!body) return;
   const all = [...h.rows.map(r => r.score), ...a.rows.map(r => r.score)];
   const max = Math.max(...all.map(Math.abs)) || 1;
   const html = [];
@@ -86,26 +100,31 @@ function renderLeaderboard(h, a) {
     html.push(leaderRow(r, rank, isRef, !!r.best, max));
   }
 
-  document.getElementById('lb-body').innerHTML = html.join('');
-  document.getElementById('lb-note').textContent = `${h.note} ${a.note}`;
+  body.innerHTML = html.join('');
+  const note = byId('lb-note');
+  if (note) note.textContent = `${h.note} ${a.note}`;
 }
 
 /* Models down the side, themes across the top. */
 function renderThemes(t) {
+  if (!byId('th-body')) return;
   const max = Math.max(...t.rows.flatMap(r => r.scores.map(Math.abs))) || 1;
-  document.getElementById('th-head').innerHTML =
+  const head = byId('th-head');
+  if (head) head.innerHTML =
     '<th>Model</th>' + t.columns.map(c => `<th class="num">${esc(c)}</th>`).join('');
-  document.getElementById('th-body').innerHTML = t.rows.map(r => `
+  byId('th-body').innerHTML = t.rows.map(r => `
     <tr>
       <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${
         { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || ''}</span></td>
       ${r.scores.map(v => `<td class="cell">${scoreCell(v)}${cellBar(v, max)}</td>`).join('')}
     </tr>`).join('');
-  document.getElementById('th-note').textContent = `${t.window} ${t.note}`;
+  const tn = byId('th-note');
+  if (tn) tn.textContent = `${t.window} ${t.note}`;
 }
 
 function renderIndicators(list) {
-  document.getElementById('ind-grid').innerHTML = list.map(t => `
+  if (!byId('ind-grid')) return;
+  byId('ind-grid').innerHTML = list.map(t => `
     <div class="card">
       <span class="tag">${t.items.length} indicators</span>
       <h4>${esc(t.theme)}</h4>
@@ -115,15 +134,17 @@ function renderIndicators(list) {
 }
 
 function renderFed(list) {
-  document.getElementById('fed-list').innerHTML = list.map(f =>
+  if (!byId('fed-list')) return;
+  byId('fed-list').innerHTML = list.map(f =>
     `<li>${link(f.name, f.url)} <span class="ci">— ${esc(f.target)}</span></li>`).join('');
 }
 
 fetch('data/leaderboard.json?v=' + Date.now())
   .then(r => r.json())
   .then(d => {
-    document.getElementById('last-updated').textContent = fmtDate(d.last_updated);
-    document.getElementById('next-update').textContent = fmtDate(d.next_update);
+    const lu = byId('last-updated'), nu = byId('next-update');
+    if (lu) lu.textContent = fmtDate(d.last_updated);
+    if (nu) nu.textContent = fmtDate(d.next_update);
     renderLeaderboard(d.headline, d.agent_design);
     renderThemes(d.themes);
     renderIndicators(d.indicators);
@@ -131,6 +152,10 @@ fetch('data/leaderboard.json?v=' + Date.now())
   })
   .catch(e => {
     console.error(e);
-    document.getElementById('lb-body').innerHTML =
-      '<tr><td colspan="6">Could not load data/leaderboard.json. If you opened this file directly with file://, serve it instead: <code>python3 -m http.server</code></td></tr>';
+    const body = byId('lb-body');
+    if (!body) return;
+    const msg = location.protocol === 'file:'
+      ? 'This page reads its numbers with fetch(), which a browser blocks on file:// URLs. Serve the folder instead: <code>python3 -m http.server</code> in docs/, then open http://localhost:8000.'
+      : `Could not load data/leaderboard.json (${esc(e.message || e)}). A hard reload usually fixes it — the page and the script are cached separately.`;
+    body.innerHTML = `<tr><td colspan="6">${msg}</td></tr>`;
   });

@@ -126,13 +126,13 @@ nav .navlinks { display: flex; gap: 22px; }
 /* ---------- hero ---------- */
 header.hero { padding: 72px 0 44px; }
 h1.title {
-  font-family: var(--display); font-size: clamp(46px, 8vw, 86px); line-height: 1.02;
-  letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 600;
+  font-family: var(--display); font-size: clamp(52px, 10vw, 116px); line-height: 1.0;
+  letter-spacing: -0.018em; margin: 0 0 22px; font-weight: 600;
 }
 h1.title span { color: var(--accent-ink); }
 .papertitle {
-  font-family: var(--display); font-size: clamp(19px, 2.5vw, 25px); line-height: 1.35;
-  font-weight: 400; color: var(--fg); margin: 0 auto 16px; max-width: 22em;
+  font-family: var(--display); font-size: clamp(20px, 2.7vw, 28px); line-height: 1.32;
+  font-weight: 400; color: var(--fg); margin: 0 auto 20px; max-width: 26em;
 }
 
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -172,8 +172,8 @@ h1.title span { color: var(--accent-ink); }
 section { padding: 58px 0; }
 section + section { border-top: 1px solid var(--border); }
 h2 {
-  font-family: var(--display); font-size: clamp(28px, 3.6vw, 38px); font-weight: 600;
-  letter-spacing: -0.02em; line-height: 1.16; margin: 0 auto 24px; max-width: 20em;
+  font-family: var(--display); font-size: clamp(31px, 4.2vw, 48px); font-weight: 600;
+  letter-spacing: -0.018em; line-height: 1.14; margin: 0 auto 26px;
   text-align: center;
 }
 h3 {
