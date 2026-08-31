@@ -39,7 +39,7 @@
   --pos: var(--accent-ink);
   --neg: var(--warm-ink);
 
-  --max: 1060px;
+  --max: 1200px;
   /* prose spans the full wrap, so a paragraph lines up with the nav:
      the brand on the left, the last nav link on the right */
   --measure: 100%;
@@ -68,7 +68,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 68px; }
+html { scroll-behavior: smooth; scroll-padding-top: 74px; }
 
 body {
   margin: 0;
@@ -91,7 +91,7 @@ a:hover { color: var(--warm-ink); }
 strong, b { font-weight: 600; }
 .hl { font-style: normal; color: var(--warm-ink); }
 /* the standfirst that opens the page, above the first heading */
-.lead { font-size: 19px; line-height: 1.55; color: var(--fg-muted); margin: 0 0 34px; }
+.lead { font-size: 20px; line-height: 1.55; color: var(--fg); margin: 0 0 34px; }
 /* keep the highlighted phrase on one line so the hyphen never breaks */
 .papertitle .hl { white-space: nowrap; }
 
@@ -107,15 +107,15 @@ nav {
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
 }
-nav .wrap { display: flex; align-items: baseline; gap: 22px; height: 56px; padding-top: 17px; }
+nav .wrap { display: flex; align-items: baseline; gap: 24px; height: 62px; padding-top: 20px; }
 nav .brand {
-  font-family: var(--display); font-weight: 600; font-size: 18px;
+  font-family: var(--display); font-weight: 600; font-size: 22px;
   letter-spacing: -0.015em; margin-right: auto; color: var(--fg);
 }
 nav .brand span { color: var(--accent-ink); }
 nav a {
   font-family: var(--text); color: var(--fg-muted); text-decoration: none;
-  font-size: 13px; font-weight: 500;
+  font-size: 15px; font-weight: 500;
 }
 nav a:hover { color: var(--fg); text-decoration: underline; }
 nav .navlinks { display: flex; gap: 22px; }
@@ -131,10 +131,6 @@ h1.title span { color: var(--accent-ink); }
 .papertitle {
   font-family: var(--display); font-size: clamp(19px, 2.5vw, 25px); line-height: 1.35;
   font-weight: 400; color: var(--fg); margin: 0 auto 16px; max-width: 22em;
-}
-.subtitle {
-  font-family: var(--text); font-weight: 400; font-size: 15.5px; line-height: 1.55;
-  color: var(--fg-muted); margin: 0 auto 28px; max-width: 34em;
 }
 
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -152,11 +148,12 @@ h1.title span { color: var(--accent-ink); }
 /* ---------- live strip ---------- */
 .livestrip {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  gap: 8px 26px; margin: 34px auto 0; padding: 12px 0; max-width: 46em;
+  gap: 8px 28px; margin: 34px auto 0; padding: 13px 0; max-width: 760px;
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   font-family: var(--text); font-size: 13px; color: var(--fg-muted);
 }
-.livestrip .k { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--fg-faint); }
+.livestrip .k { text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px;
+                font-weight: 700; color: var(--fg-muted); }
 .livestrip b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
@@ -197,13 +194,13 @@ h3::after {
   font-family: var(--display); margin: 3px 0 5px;
   font-size: 19px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.25;
 }
-.card .blurb { font-family: var(--text); font-size: 12.5px; color: var(--fg-faint); margin: 0 0 12px; }
+.card .blurb { font-family: var(--text); font-size: 13.5px; font-weight: 600;
+               color: var(--fg-muted); margin: 0 0 12px; }
 .card p { max-width: none; margin-left: 0; margin-right: 0; }
-.card ul { margin: 0; padding-left: 16px; font-size: 15px; color: var(--fg-muted); }
+.card ul { margin: 0; padding-left: 16px; font-size: 15.5px; color: var(--fg); }
 .card li { margin-bottom: 5px; }
-.card .tag { font-size: 10.5px; color: var(--accent-ink); }
-.card .cardp { font-size: 15px; color: var(--fg-muted); line-height: 1.6; margin: 0; }
-.card .fine { font-family: var(--text); font-size: 13px; color: var(--fg-faint); line-height: 1.5; margin: 0; }
+.card .tag { font-size: 12px; color: var(--accent-ink); }
+.card .cardp { font-size: 15.5px; color: var(--fg); line-height: 1.62; margin: 0; }
 
 /* ---------- tables ---------- */
 .tablewrap {
@@ -265,8 +262,8 @@ figure { margin: 0 auto 28px; }
 figure img { width: 100%; height: auto; display: block; border: 1px solid var(--border); background: #fff; }
 figure.plain img { border: none; background: none; }
 figcaption {
-  font-family: var(--text); font-size: 12.5px; color: var(--fg-faint);
-  margin: 10px 0 0; line-height: 1.55; text-align: left;
+  font-family: var(--text); font-size: 14.5px; color: var(--fg-muted);
+  margin: 12px 0 0; line-height: 1.6; text-align: left;
 }
 figcaption b { color: var(--fg); font-weight: 600; }
 
@@ -274,11 +271,11 @@ figcaption b { color: var(--fg); font-weight: 600; }
 pre {
   background: var(--bg-soft); border: 1px solid var(--border);
   padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px;
-  line-height: 1.6; color: var(--fg-muted); margin: 0; text-align: left;
+  line-height: 1.6; color: var(--fg); margin: 0; text-align: left;
 }
 .note {
-  font-family: var(--text); font-size: 12.5px; color: var(--fg-faint);
-  line-height: 1.55; margin: 12px 0 20px;
+  font-family: var(--text); font-size: 14px; color: var(--fg-muted);
+  line-height: 1.6; margin: 12px 0 20px;
 }
 footer {
   padding: 34px 0 56px; font-family: var(--text); font-size: 13.5px;

@@ -21,10 +21,10 @@
     <div class="navlinks">
       <a href="#why">Why</a>
       <a href="#indicators">Indicators</a>
-      <a href="#leaderboard">Leaderboard</a>
       <a href="#metrics">Scoring</a>
-      <a href="#themes">Themes</a>
+      <a href="#leaderboard">Leaderboard</a>
       <a href="#betting">LiveBetting</a>
+      <a href="#themes">Themes</a>
       <a href="#cite">Cite</a>
     </div>
   </div>
@@ -58,12 +58,15 @@
       against the equity market, prediction markets, and professional economists.</p>
 
     <h2>Why a live benchmark?</h2>
-    <p>Nowcasting means estimating an indicator before it is officially released. Central banks staff
-      whole teams to do it, and an LLM agent can be asked far more often than any of them.</p>
-    <p>The catch is contamination. GDP and CPI are among the most reported numbers on earth, so their
-      past values are almost certainly memorized during pretraining, and testing on old releases
-      measures recall rather than nowcasting. LiveMacroEval scores only nowcasts made before the
-      release, which keeps it clean by construction.</p>
+    <p><b class="hl">Nowcasting</b> means estimating an indicator before it is officially released.
+      Central banks staff whole teams to do it, and an LLM agent can be asked far more often than any
+      of them.</p>
+    <p>The issue is LLM <b class="hl">memorization</b> leading to <b class="hl">data contamination</b>.
+      GDP and CPI are among the most reported numbers on earth, so their past values are almost
+      certainly memorized during pretraining, and testing on old releases measures recall rather than
+      nowcasting.</p>
+    <p><b class="hl">LiveMacroEval</b> scores only nowcasts made before the release, which keeps it
+      clean by construction.</p>
 
     <figure class="plain">
       <img src="assets/figures/pipeline_overview.png" alt="LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines">
@@ -104,36 +107,6 @@
   </div>
 </section>
 
-<section id="leaderboard">
-  <div class="wrap">
-    <h2>Leaderboard</h2>
-    <div class="tablewrap">
-      <table>
-        <thead><tr>
-          <th style="width:44px">#</th><th>Model</th>
-          <th class="num">LiveMacro</th><th class="num">90% CI</th><th class="num">Events</th>
-          <th class="barcell">vs. consensus</th>
-        </tr></thead>
-        <tbody id="lb-body"><tr><td colspan="6">Loading…</td></tr></tbody>
-      </table>
-    </div>
-    <p class="note" id="lb-note">—</p>
-  </div>
-</section>
-
-<section id="agents">
-  <div class="wrap">
-    <h2>Tool and agent design</h2>
-    <div class="tablewrap" style="max-width:520px">
-      <table class="narrow">
-        <thead><tr><th>Configuration</th><th class="num">LiveMacro</th></tr></thead>
-        <tbody id="ad-body"></tbody>
-      </table>
-    </div>
-    <p class="note" id="ad-note">—</p>
-  </div>
-</section>
-
 <section id="metrics">
   <div class="wrap">
     <h2>How we score</h2>
@@ -160,6 +133,38 @@
   </div>
 </section>
 
+<section id="leaderboard">
+  <div class="wrap">
+    <h2>Leaderboard: LiveMacro Score</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th style="width:44px">#</th><th>Model</th>
+          <th class="num">LiveMacro</th><th class="num">90% CI</th><th class="num">Events</th>
+          <th class="barcell">vs. consensus</th>
+        </tr></thead>
+        <tbody id="lb-body"><tr><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="lb-note">—</p>
+  </div>
+</section>
+
+<section id="betting">
+  <div class="wrap">
+    <h2>Real-time return: LiveBetting Score</h2>
+    <p>On real GDP four agents finish the window with positive cumulative returns, and three beat the
+      Atlanta Fed, with only the New York Fed ahead. On the unemployment rate the leading agent
+      finishes above the Chicago Fed.</p>
+    <p>CPI is the exception. The Cleveland Fed and the Bloomberg consensus still beat every agent —
+      a real limit on indicators where institutional models are tuned to known economic structure.</p>
+
+    <figure><img src="assets/figures/continuous_returns_real_gdp_qoq_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on real GDP, by model and Fed nowcast"><figcaption><b>Real GDP</b> — cumulative LiveBetting return across the February and March windows.</figcaption></figure>
+    <figure><img src="assets/figures/continuous_returns_unemployment_rate_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on the unemployment rate"><figcaption><b>Unemployment rate</b> — cumulative LiveBetting return.</figcaption></figure>
+    <figure><img src="assets/figures/continuous_returns_cpi_yoy_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on CPI"><figcaption><b>CPI</b> — cumulative LiveBetting return.</figcaption></figure>
+  </div>
+</section>
+
 <section id="themes">
   <div class="wrap">
     <h2>Where the skill is</h2>
@@ -180,18 +185,16 @@
   </div>
 </section>
 
-<section id="betting">
+<section id="agents">
   <div class="wrap">
-    <h2>LiveBetting: trading against the Fed</h2>
-    <p>On real GDP four agents finish the window with positive cumulative returns, and three beat the
-      Atlanta Fed, with only the New York Fed ahead. On the unemployment rate the leading agent
-      finishes above the Chicago Fed.</p>
-    <p>CPI is the exception. The Cleveland Fed and the Bloomberg consensus still beat every agent —
-      a real limit on indicators where institutional models are tuned to known economic structure.</p>
-
-    <figure><img src="assets/figures/continuous_returns_real_gdp_qoq_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on real GDP, by model and Fed nowcast"><figcaption><b>Real GDP</b> — cumulative LiveBetting return across the February and March windows.</figcaption></figure>
-    <figure><img src="assets/figures/continuous_returns_unemployment_rate_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on the unemployment rate"><figcaption><b>Unemployment rate</b> — cumulative LiveBetting return.</figcaption></figure>
-    <figure><img src="assets/figures/continuous_returns_cpi_yoy_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on CPI"><figcaption><b>CPI</b> — cumulative LiveBetting return.</figcaption></figure>
+    <h2>Tool and agent design</h2>
+    <div class="tablewrap" style="max-width:520px">
+      <table class="narrow">
+        <thead><tr><th>Configuration</th><th class="num">LiveMacro</th></tr></thead>
+        <tbody id="ad-body"></tbody>
+      </table>
+    </div>
+    <p class="note" id="ad-note">—</p>
   </div>
 </section>
 
