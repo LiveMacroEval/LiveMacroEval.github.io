@@ -279,7 +279,18 @@ figure img { width: 100%; height: auto; display: block; border: 1px solid var(--
 figure.plain img { border: none; background: none; }
 /* the pipeline figure sits directly under the banner, so it and its note are
    part of the hero: centred, and the note keeps the standfirst's size */
-.hero-fig { margin: 48px auto 0; }
+/* Figure 1 is drawn inline (vector shapes + real text rebuilt from the paper's
+   figure1.pptx), so it can be wider than the text column and stay legible: it
+   breaks out to min(1080px, viewport - 52px) and is centred on the column,
+   which is itself centred on the page. Below 712px it is the column width. */
+.hero-fig {
+  --figw: min(1080px, 100vw - 52px);
+  width: var(--figw);
+  margin: 48px 0 0 calc(50% - var(--figw) / 2);
+}
+.hero-fig .fig1 { width: 100%; height: auto; display: block; }
+/* the figure keeps the typeface it was drawn in, not the site's Libre Franklin */
+.hero-fig .fig1 text { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 .hero-fig figcaption {
   font-size: 19px; line-height: 1.5; color: var(--fg);
   text-align: center; margin: 16px auto 0; max-width: 44em;

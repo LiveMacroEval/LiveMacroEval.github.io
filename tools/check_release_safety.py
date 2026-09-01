@@ -54,6 +54,15 @@ ALLOWED_FILES = {
 }
 ALLOWED_FILES |= {f"assets/figures/{name}" for name in FIGURES}
 
+# Figure 1 (the pipeline overview) is drawn inline in index.html since
+# 2026-09-01 -- vector shapes and real text rebuilt from Paper/plots/figure1.pptx
+# -- so only its raster icons ship as files: cropped, downscaled copies of the
+# slide's pictures (factory, cart, ... , the FED building). No data in any of them.
+PIPELINE_ICONS = {"arima", "briefcase", "cart", "factory", "fed", "housing",
+                  "polymarket", "target", "theme"}
+PIPELINE_ICON_FILES = [f"assets/figures/pipeline/{n}.png" for n in sorted(PIPELINE_ICONS)]
+ALLOWED_FILES |= set(PIPELINE_ICON_FILES)
+
 # Per-file byte ceilings. Generous, but a data dump blows past them.
 MAX_BYTES = {
     ".json": 32 * 1024,
@@ -212,14 +221,15 @@ def check_allowlist() -> None:
 
 
 def check_images() -> None:
-    for name in FIGURES:
-        p = SITE / "assets/figures" / name
+    rels = [f"assets/figures/{name}" for name in FIGURES] + PIPELINE_ICON_FILES
+    for rel in rels:
+        p = SITE / rel
         if not p.exists():
             continue
         magic = IMAGE_MAGIC.get(p.suffix.lower())
         head = p.read_bytes()[:16]
         if magic and not head.startswith(magic):
-            fail(f"assets/figures/{name}: not a real {p.suffix} file -- "
+            fail(f"{rel}: not a real {p.suffix} file -- "
                  "a data file may have been renamed")
 
 
