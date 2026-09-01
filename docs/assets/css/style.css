@@ -350,6 +350,9 @@ svg.chart .axis   { stroke: var(--fg-muted); stroke-width: 1.2; }
 svg.chart .zero   { stroke: var(--fg-faint); stroke-width: 1.4; }
 svg.chart .marker { stroke: var(--fg-faint); stroke-width: 1.4; stroke-dasharray: 5 4; }
 svg.chart text    { font-family: var(--text); }
+/* numbers line up column-wise, the same way every other figure on the page
+   sets them (.score, .ci, td.num, td.cell, .livestrip b) */
+svg.chart .ylab, svg.chart .xlab { font-variant-numeric: tabular-nums; }
 svg.chart .ylab   { font-size: 12px; fill: var(--fg-muted); text-anchor: end; }
 svg.chart .xlab   { font-size: 12px; fill: var(--fg-muted); text-anchor: middle; }
 svg.chart .axlab  { font-size: 12.5px; fill: var(--fg-muted); text-anchor: middle; }
@@ -361,3 +364,25 @@ svg.chart .endlab { font-size: 12.5px; font-weight: 600; dominant-baseline: midd
 @media (max-width: 560px) {
   svg.chart .endlab, svg.chart .ylab, svg.chart .xlab { font-size: 15px; }
 }
+
+/* --- hover readout ------------------------------------------------------
+   The value shown is the plotted point itself -- the same rounded, downsampled
+   number already in series.json. Hovering reveals nothing the chart does not
+   already draw; it just saves reading against the axis. */
+.chartbox { position: relative; }
+.chartbox .tip {
+  position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+  transition: opacity .09s ease-out;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.10);
+  padding: 8px 10px; font-family: var(--text); font-size: 12.5px;
+  line-height: 1.5; color: var(--fg); min-width: 128px; max-width: 230px;
+}
+.chartbox .tip.on { opacity: 1; }
+.chartbox .tip .tx { font-weight: 700; margin-bottom: 4px; color: var(--fg); }
+.chartbox .tip .tr { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.chartbox .tip .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.chartbox .tip .tn { flex: 1; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; }
+.chartbox .tip .tv { font-weight: 600; font-variant-numeric: tabular-nums; }
+svg.chart .hoverline { stroke: var(--fg-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+svg.chart .hoverdot  { stroke: var(--bg); stroke-width: 1.6; }

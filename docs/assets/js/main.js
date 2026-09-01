@@ -298,8 +298,82 @@ function lineChart(mount, spec) {
     }, l.name));
   });
 
+  /* ---- hover readout ---------------------------------------------------
+     A transparent capture rect over the plot area, a vertical guide, a dot on
+     every series that has a value at that x, and an HTML tooltip. The numbers
+     shown are the plotted points themselves -- the same rounded, downsampled
+     values already in series.json -- so this reveals nothing the chart does
+     not already draw. Pointer events cover mouse, pen and touch alike. */
+  const guide = el('line', { class: 'hoverline', y1: M.t, y2: M.t + ih, opacity: 0 });
+  svg.appendChild(guide);
+  const dots = spec.series.map(() => {
+    const c = el('circle', { r: 4, class: 'hoverdot', opacity: 0 });
+    svg.appendChild(c);
+    return c;
+  });
+  const hit = el('rect', {
+    x: M.l, y: M.t, width: iw, height: ih, fill: 'transparent',
+    style: 'cursor:crosshair',
+  });
+  svg.appendChild(hit);
+
   mount.innerHTML = '';
+  mount.className = 'chartbox';
   mount.appendChild(svg);
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  mount.appendChild(tip);
+
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  function hide() {
+    tip.classList.remove('on');
+    guide.setAttribute('opacity', 0);
+    dots.forEach(d => d.setAttribute('opacity', 0));
+  }
+  function move(ev) {
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const loc = pt.matrixTransform(ctm.inverse());
+    // nearest whole step, so the readout snaps to real points not interpolations
+    const xv = Math.round(clamp(xlo + (loc.x - M.l) / iw * (xhi - xlo), xlo, xhi));
+    const rows = [];
+    spec.series.forEach((s, k) => {
+      const i = xv - s.x0, v = s.values[i];
+      if (i < 0 || i >= s.values.length || v === null || !isFinite(v)) {
+        dots[k].setAttribute('opacity', 0);
+        return;
+      }
+      dots[k].setAttribute('cx', X(xv));
+      dots[k].setAttribute('cy', Y(v));
+      dots[k].setAttribute('fill', s.color);
+      dots[k].setAttribute('opacity', 1);
+      rows.push({ name: s.name, color: s.color, v });
+    });
+    if (!rows.length) { hide(); return; }
+    rows.sort((a, b) => b.v - a.v);
+    guide.setAttribute('x1', X(xv));
+    guide.setAttribute('x2', X(xv));
+    guide.setAttribute('opacity', 1);
+    const xh = (spec.xtipfmt || spec.xfmt)(xv);
+    tip.innerHTML = `<div class="tx">${esc(xh)}</div>` + rows.map(r =>
+      `<div class="tr"><span class="sw" style="background:${r.color}"></span>`
+      + `<span class="tn">${esc(r.name)}</span>`
+      + `<span class="tv">${esc(spec.tipfmt(r.v))}</span></div>`).join('');
+    tip.classList.add('on');
+    // place beside the cursor, flipping before it runs off either edge
+    const box = mount.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = ev.clientX - box.left + 14;
+    if (left + tw > box.width) left = ev.clientX - box.left - tw - 14;
+    tip.style.left = clamp(left, 0, Math.max(0, box.width - tw)) + 'px';
+    tip.style.top = clamp(ev.clientY - box.top - th - 12, 0,
+                          Math.max(0, box.height - th)) + 'px';
+  }
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', hide);
 }
 
 const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '%';
@@ -330,6 +404,8 @@ function renderBettingCharts(b) {
       alt: `Cumulative LiveBetting return on ${m.label}, by model and baseline`,
       xLabel: 'Days since nowcasting start',
       fmt: v => pct(v), xfmt: v => '+' + Math.round(v),
+      xtipfmt: v => 'Day +' + Math.round(v),
+      tipfmt: v => pct(v),
     });
   });
 }
@@ -359,6 +435,7 @@ function renderCaseCharts(c) {
       marker: hoursTo(p.event) / p.step_hours,
       markerLabel: 'Apr 8',
       fmt: (v, dp) => v.toFixed(dp),
+      tipfmt: v => v.toFixed(2) + '%',
       xfmt: v => {
         const d = new Date(t0.getTime() + v * p.step_hours * 3.6e6);
         return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
