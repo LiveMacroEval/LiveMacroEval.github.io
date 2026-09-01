@@ -146,13 +146,10 @@ h1.title span { color: var(--accent-ink); }
   transition: .15s;
 }
 .btn:hover { background: var(--fg); color: var(--bg); }
-/* The primary button is the site's teal, not near-black: --fg reads as an
-   unstyled slab next to the two outline buttons. Colour is var(--bg) rather
-   than a literal #fff because --accent-ink INVERTS between themes -- it is a
-   dark teal on white (white text, 5.98:1) and a light teal on near-black
-   (dark text, 8.37:1). Hard-coding white would give 2.45:1 in dark mode. */
-.btn.primary { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--bg); }
-.btn.primary:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+/* No `primary` variant: all three buttons are the same outline treatment. A
+   filled one was tried in both near-black and the site teal and read as too
+   loud beside the other two -- the row is three peer links, not one call to
+   action. `.btn:hover` above supplies the only fill. */
 .btn.disabled { border-color: var(--border); color: var(--fg-faint); background: var(--bg-soft); pointer-events: none; }
 
 /* ---------- live strip ---------- */
