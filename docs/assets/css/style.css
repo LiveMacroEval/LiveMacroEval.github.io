@@ -146,8 +146,13 @@ h1.title span { color: var(--accent-ink); }
   transition: .15s;
 }
 .btn:hover { background: var(--fg); color: var(--bg); }
-.btn.primary { background: var(--fg); color: var(--bg); }
-.btn.primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+/* The primary button is the site's teal, not near-black: --fg reads as an
+   unstyled slab next to the two outline buttons. Colour is var(--bg) rather
+   than a literal #fff because --accent-ink INVERTS between themes -- it is a
+   dark teal on white (white text, 5.98:1) and a light teal on near-black
+   (dark text, 8.37:1). Hard-coding white would give 2.45:1 in dark mode. */
+.btn.primary { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--bg); }
+.btn.primary:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 .btn.disabled { border-color: var(--border); color: var(--fg-faint); background: var(--bg-soft); pointer-events: none; }
 
 /* ---------- live strip ---------- */
