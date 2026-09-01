@@ -410,8 +410,13 @@ def main() -> None:
                     help="leave the themes/betting blocks in the JSON untouched")
     ap.add_argument("--skip-series", action="store_true",
                     help="leave docs/data/series.json (the line charts) untouched")
+    ap.add_argument("--last-updated", default=None,
+                    help="YYYY-MM-DD the RESULTS last moved. Defaults to today, which "
+                         "is only right when this run actually refreshed the numbers -- "
+                         "a cosmetic or chart-only run should pass the previous value, "
+                         "or the page overstates how fresh the data is.")
     ap.add_argument("--next-update", default=None,
-                    help="YYYY-MM-DD of the next refresh (default: today + 30 days)")
+                    help="YYYY-MM-DD of the next refresh (default: last_updated + 30 days)")
     ap.add_argument("--skip-figures", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print the JSON, write nothing")
     args = ap.parse_args()
@@ -443,9 +448,10 @@ def main() -> None:
         betting_dir = args.results_root / BETTING_SUBPATH / (args.betting_dir or PAPER_BETTING_DIR)
         data["betting"]["markets"] = read_betting(betting_dir)
 
-    today = dt.date.today()
-    data["last_updated"] = today.isoformat()
-    data["next_update"] = args.next_update or (today + dt.timedelta(days=30)).isoformat()
+    stamp = (dt.date.fromisoformat(args.last_updated) if args.last_updated
+             else dt.date.today())
+    data["last_updated"] = stamp.isoformat()
+    data["next_update"] = args.next_update or (stamp + dt.timedelta(days=30)).isoformat()
 
     series = None
     if not args.skip_series:
