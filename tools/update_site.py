@@ -34,6 +34,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -193,6 +194,158 @@ def read_betting(betting_dir: Path) -> list[dict]:
     return markets
 
 
+# ---------------------------------------------------------------- series ----
+# The line charts are drawn on the page from data rather than shipped as PNGs,
+# so they carry the site's own palette and type. What goes into series.json is
+# deliberately COARSER than the pipeline's own output -- see check_release_safety
+# for the caps that enforce it:
+#   * betting curves are downsampled to ONE POINT PER DAY of stitched time and
+#     rounded to 0.1pp. The underlying series is hourly.
+#   * the case-study panels publish a SMOOTHED CURVE, not the raw nowcasts. A
+#     Gaussian-kernel smooth of the 12-hourly means is a derived aggregate; the
+#     per-hour records themselves stay private.
+# Both are already public as PNGs in the paper; this changes precision, not kind.
+SERIES_BETTING_STEP_DAYS = 1
+CASE_STUDY_SUBPATH = "remove_outlier_and_plot/processed_final_analysis_data"
+CASE_STUDY_ARM = "model_gpt-5-search-api"
+CASE_STUDY_FILE = "2026-03_core_macroeconomic_conditions.csv"
+CASE_STUDY_STEP_H = 12
+CASE_STUDY_BANDWIDTH_H = 18.0   # Gaussian sigma, in hours
+# Marker drawn on both panels: EVENT_TIME in render_paper_cpi_pce.py.
+CASE_STUDY_EVENT = "2026-04-08T10:30"
+# Same right edge as the paper's event-study figure. Without it the PCE panel
+# runs to 2026-05-03, where a much larger end-April move dwarfs the 8 April
+# shift the section is actually about -- the chart would then contradict the
+# prose next to it.
+CASE_STUDY_CLIP = "2026-04-20"
+CASE_STUDY_PANELS = [
+    ("cpi_yoy", "March 2026 CPI", "Year-over-year growth (%)"),
+    ("pce_price_index_mom", "March 2026 PCE price index", "Month-over-month growth (%)"),
+]
+
+
+def _parse_ts(text: str):
+    """Parse the pipeline's timestamp_local, which is mixed-format."""
+    text = (text or "").strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return dt.datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def read_betting_series(betting_dir: Path) -> list[dict]:
+    """Cumulative-return curves, one point per day of stitched time.
+
+    `stitched_x_days` is the x-axis the paper figure plots, so downsampling on
+    it keeps the shape identical while cutting ~1,400 hourly points per market
+    to a few dozen. Arms join the chart at their own first bet, so each series
+    carries its own `start` offset rather than a shared x grid.
+    """
+    markets = []
+    for key, label in BETTING_MARKETS:
+        path = betting_dir / f"continuous_returns_{key}_{BETTING_ANCHOR}.csv"
+        if not path.exists():
+            sys.exit(f"betting CSV not found:\n  {path}")
+        by_arm: dict[str, dict[int, tuple[float, float]]] = {}
+        for r in csv.DictReader(path.open()):
+            arm = r["model"]
+            if arm in BETTING_DROPPED:
+                continue
+            x = float(r["stitched_x_days"])
+            day = int(x // SERIES_BETTING_STEP_DAYS)
+            cell = by_arm.setdefault(arm, {})
+            # last observation within the day wins
+            if day not in cell or x > cell[day][0]:
+                cell[day] = (x, float(r["cumulative_return_pct"]))
+        series = []
+        for arm, cell in by_arm.items():
+            days = sorted(cell)
+            lo, hi = days[0], days[-1]
+            # null for a day with no bet, so the chart can break the line
+            values = [round(cell[d][1], 1) if d in cell else None
+                      for d in range(lo, hi + 1)]
+            series.append({
+                "name": BETTING_LABELS.get(arm, arm),
+                "kind": "human" if _is_human(arm) else "llm",
+                "start": lo,
+                "values": values,
+            })
+        series.sort(key=lambda s: -(next((v for v in reversed(s["values"])
+                                          if v is not None), 0.0)))
+        markets.append({"key": key, "label": label,
+                        "step_days": SERIES_BETTING_STEP_DAYS, "series": series})
+    return markets
+
+
+def _gaussian_smooth(hours: list[float], values: list[float],
+                     bandwidth: float) -> list[float]:
+    """Kernel-smooth an irregular series. Pure stdlib on purpose: this module is
+    imported by check_release_safety.py, which the pre-commit hook runs under the
+    system python3, where scipy is not guaranteed."""
+    out = []
+    for h in hours:
+        num = den = 0.0
+        for hj, vj in zip(hours, values):
+            w = math.exp(-0.5 * ((h - hj) / bandwidth) ** 2)
+            num += w * vj
+            den += w
+        out.append(num / den if den else vj)
+    return out
+
+
+def read_case_study(results_root: Path) -> list[dict]:
+    """Smoothed GPT-5 nowcast curves for the two case-study indicators.
+
+    Reads the outlier-filtered mirror (`processed_final_analysis_data/`), bins to
+    12-hourly means, then publishes the Gaussian-smoothed curve ONLY. The raw
+    per-hour nowcasts are not published.
+    """
+    path = results_root / CASE_STUDY_SUBPATH / CASE_STUDY_ARM / CASE_STUDY_FILE
+    if not path.exists():
+        sys.exit(f"case-study CSV not found:\n  {path}\n"
+                 "It is produced by remove_outlier_and_plot (Step 3).")
+    by_var: dict[str, list[tuple[dt.datetime, float]]] = {}
+    for r in csv.DictReader(path.open()):
+        v = r.get("variable")
+        if v not in {k for k, _l, _u in CASE_STUDY_PANELS}:
+            continue
+        ts = _parse_ts(r.get("timestamp_local", ""))
+        try:
+            val = float(r["value"])
+        except (TypeError, ValueError):
+            continue
+        if ts is not None:
+            by_var.setdefault(v, []).append((ts, val))
+
+    panels = []
+    step = dt.timedelta(hours=CASE_STUDY_STEP_H)
+    for key, label, unit in CASE_STUDY_PANELS:
+        clip = dt.datetime.strptime(CASE_STUDY_CLIP, "%Y-%m-%d")
+        pts = sorted(pt for pt in by_var.get(key, []) if pt[0] <= clip)
+        if not pts:
+            sys.exit(f"case study: no rows for {key} in {path}")
+        t0 = pts[0][0].replace(minute=0, second=0, microsecond=0)
+        buckets: dict[int, list[float]] = {}
+        for ts, val in pts:
+            buckets.setdefault(int((ts - t0) / step), []).append(val)
+        idx = sorted(buckets)
+        hours = [i * CASE_STUDY_STEP_H for i in idx]
+        means = [sum(buckets[i]) / len(buckets[i]) for i in idx]
+        smooth = _gaussian_smooth(hours, means, CASE_STUDY_BANDWIDTH_H)
+        panels.append({
+            "key": key,
+            "label": label,
+            "unit": unit,
+            "start": t0.isoformat(timespec="minutes"),
+            "step_hours": CASE_STUDY_STEP_H,
+            "event": CASE_STUDY_EVENT,
+            "values": [round(v, 3) for v in smooth],
+        })
+    return panels
+
+
 def read_scores(csv_path: Path) -> list[dict]:
     if not csv_path.exists():
         sys.exit(
@@ -255,6 +408,8 @@ def main() -> None:
                          % (BETTING_SUBPATH, PAPER_BETTING_DIR))
     ap.add_argument("--skip-themes", action="store_true",
                     help="leave the themes/betting blocks in the JSON untouched")
+    ap.add_argument("--skip-series", action="store_true",
+                    help="leave docs/data/series.json (the line charts) untouched")
     ap.add_argument("--next-update", default=None,
                     help="YYYY-MM-DD of the next refresh (default: today + 30 days)")
     ap.add_argument("--skip-figures", action="store_true")
@@ -292,12 +447,44 @@ def main() -> None:
     data["last_updated"] = today.isoformat()
     data["next_update"] = args.next_update or (today + dt.timedelta(days=30)).isoformat()
 
+    series = None
+    if not args.skip_series:
+        betting_dir = args.results_root / BETTING_SUBPATH / (args.betting_dir or PAPER_BETTING_DIR)
+        series_path = SITE / "data/series.json"
+        series = json.loads(series_path.read_text()) if series_path.exists() else {}
+        series["_comment"] = (
+            "Line-chart data for the site. Deliberately coarser than the pipeline: "
+            "betting curves are one point per day of stitched time (the source is "
+            "hourly); case-study panels are a Gaussian-smoothed curve, not the raw "
+            "nowcasts. Aggregates only -- see tools/check_release_safety.py."
+        )
+        series["betting"] = {
+            "note": data["betting"].get("note", ""),
+            "window": data["betting"].get("window", ""),
+            "markets": read_betting_series(betting_dir),
+        }
+        series["case_study"] = {
+            "note": "GPT-5 nowcasts, Gaussian-smoothed. The marker is 10:30 ET, "
+                    "8 April 2026.",
+            "panels": read_case_study(args.results_root),
+        }
+
     if args.dry_run:
         print(json.dumps({k: data[k] for k in ("headline", "themes", "betting")}, indent=2))
+        if series is not None:
+            print(json.dumps(series, indent=2)[:2000])
         return
 
     out.write_text(json.dumps(data, indent=2) + "\n")
     print(f"wrote docs/data/leaderboard.json  ({len(data['headline']['rows'])} rows)")
+
+    if series is not None:
+        sp = SITE / "data/series.json"
+        sp.write_text(json.dumps(series, separators=(",", ":")) + "\n")
+        n = sum(len(s["values"]) for m in series["betting"]["markets"]
+                for s in m["series"]) + sum(len(p["values"])
+                                            for p in series["case_study"]["panels"])
+        print(f"wrote docs/data/series.json  ({sp.stat().st_size} bytes, {n} points)")
 
     if not args.skip_figures:
         dest = SITE / "assets/figures"

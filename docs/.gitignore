@@ -23,6 +23,10 @@
 __pycache__/
 .DS_Store
 
-# The one JSON the site publishes is force-added; block strays.
+# Only the JSON the site actually publishes is allowed through; block strays.
+# series.json carries the line-chart data and is capped and shape-checked by
+# check_release_safety.check_series() -- see the note there for why a time
+# series is publishable at all.
 data/*.json
 !data/leaderboard.json
+!data/series.json

@@ -154,9 +154,9 @@
     <p>CPI is the exception. The Cleveland Fed and the Bloomberg consensus still beat every agent —
       a real limit on indicators where institutional models are tuned to known economic structure.</p>
 
-    <figure><img src="assets/figures/continuous_returns_real_gdp_qoq_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on real GDP, by model and Fed nowcast"><figcaption><b>Real GDP</b> — cumulative LiveBetting return across the February and March windows.</figcaption></figure>
-    <figure><img src="assets/figures/continuous_returns_unemployment_rate_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on the unemployment rate"><figcaption><b>Unemployment rate</b> — cumulative LiveBetting return.</figcaption></figure>
-    <figure><img src="assets/figures/continuous_returns_cpi_yoy_mar-anchor-claude-sonnet-4.5.png" alt="Cumulative LiveBetting returns on CPI"><figcaption><b>CPI</b> — cumulative LiveBetting return.</figcaption></figure>
+    <!-- Drawn from data/series.json by main.js, not shipped as PNGs, so the
+         curves carry the page's own type and palette. -->
+    <div id="bet-charts"></div>
   </div>
 </section>
 
@@ -188,8 +188,8 @@
       a large gasoline-inventory drawdown, and FOMC minutes flagging upside inflation risk. The size
       of the revision matches a back-of-the-envelope gasoline contribution under BLS expenditure
       weights.</p>
-    <figure><img src="assets/figures/case_study_cpi_yoy_2026_03.png" alt="GPT-5 nowcasts for March 2026 CPI"><figcaption><b>March 2026 CPI.</b> The dashed line marks 10:30 ET, April 8, 2026.</figcaption></figure>
-    <figure><img src="assets/figures/case_study_pce_mom_2026_03.png" alt="GPT-5 nowcasts for March 2026 PCE price index"><figcaption><b>March 2026 PCE price index</b> — the same shift, in the same window.</figcaption></figure>
+    <div id="case-charts"></div>
+    <p class="note">Curves are a Gaussian smooth of the hourly nowcasts.</p>
   </div>
 </section>
 
@@ -218,6 +218,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260831b"></script>
+<script src="assets/js/main.js?v=20260901c"></script>
 </body>
 </html>

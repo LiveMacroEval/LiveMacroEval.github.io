@@ -159,3 +159,215 @@ fetch('data/leaderboard.json?v=' + Date.now())
       : `Could not load data/leaderboard.json (${esc(e.message || e)}). A hard reload usually fixes it — the page and the script are cached separately.`;
     body.innerHTML = `<tr><td colspan="6">${msg}</td></tr>`;
   });
+
+/* ---------------------------------------------------------------- charts --
+   The line figures are drawn here from data/series.json rather than shipped as
+   PNGs, so they pick up the page's own type and palette and stay legible in
+   both themes. Hand-rolled SVG on purpose: a charting library would be a
+   ~200KB dependency for five static curves, and every candidate wants its own
+   colour system, which is the thing we are trying to avoid.
+
+   Series colours are the paper's own model palette, so a model reads the same
+   on the site as in the figures. Baselines (Fed nowcasts, consensus, ARIMA)
+   are dashed, matching the paper convention. */
+const SERIES_COLORS = {
+  'GPT-5': 'var(--accent)',
+  'Claude-4.5-Sonnet': 'var(--warm)',
+  'Qwen3-235B': 'var(--s-purple)',
+  'Qwen3-80B': 'var(--s-slate)',
+  'Claude Code multi-agent': 'var(--s-gold)',
+  'GPT-5 (reasoned)': 'var(--s-teal-lt)',
+};
+const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function el(name, attrs, text) {
+  const n = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+/* "Nice" axis bounds: round the data range out to a readable step so the tick
+   labels are numbers a person would choose, not 1.0473. */
+function niceScale(lo, hi, want) {
+  if (!(hi > lo)) { hi = lo + 1; }
+  const raw = (hi - lo) / Math.max(want, 2);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || 10 * mag;
+  const start = Math.floor(lo / step) * step;
+  const end = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step / 1e6; v += step) ticks.push(+v.toFixed(10));
+  return { lo: start, hi: end, ticks };
+}
+
+/* Push overlapping end-labels apart so a crowded right edge stays readable.
+   The paper figures label lines directly rather than using a legend box; this
+   keeps that, which is why the collision pass is needed at all. */
+function declutter(items, minGap) {
+  items.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < items.length; i++) {
+    if (items[i].y - items[i - 1].y < minGap) items[i].y = items[i - 1].y + minGap;
+  }
+  return items;
+}
+
+function lineChart(mount, spec) {
+  const W = 760, H = spec.height || 300;
+  const M = { t: 14, r: spec.labelWidth || 132, b: 54, l: 46 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+
+  const xs = spec.series.map(s => [s.x0, s.x0 + s.values.length - 1]);
+  const xlo = Math.min(...xs.map(p => p[0])), xhi = Math.max(...xs.map(p => p[1]));
+  const flat = spec.series.flatMap(s => s.values).filter(v => v !== null && isFinite(v));
+  if (!flat.length) return;
+  const y = niceScale(Math.min(...flat), Math.max(...flat), 5);
+  const X = v => M.l + (xhi === xlo ? 0 : (v - xlo) / (xhi - xlo)) * iw;
+  const Y = v => M.t + ih - (v - y.lo) / (y.hi - y.lo) * ih;
+
+  const svg = el('svg', {
+    viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img',
+    'aria-label': spec.alt || spec.title || 'chart',
+  });
+
+  // horizontal gridlines + y labels. Decimals come from the tick STEP, not a
+  // fixed width: a 0.05 step formatted to 1dp prints 0.3, 0.3, 0.4, 0.4.
+  const tstep = y.ticks.length > 1 ? Math.abs(y.ticks[1] - y.ticks[0]) : 1;
+  const dp = Math.max(0, Math.min(4, Math.ceil(-Math.log10(tstep) + 1e-9)));
+  for (const t of y.ticks) {
+    svg.appendChild(el('line', { x1: M.l, x2: M.l + iw, y1: Y(t), y2: Y(t), class: 'grid' }));
+    svg.appendChild(el('text', { x: M.l - 8, y: Y(t) + 4, class: 'ylab' }, spec.fmt(t, dp)));
+  }
+  // the zero line carries meaning on both chart families: break-even for the
+  // betting curves, and the consensus reference for the scores.
+  if (y.lo < 0 && y.hi > 0) {
+    svg.appendChild(el('line', { x1: M.l, x2: M.l + iw, y1: Y(0), y2: Y(0), class: 'zero' }));
+  }
+  // x axis
+  svg.appendChild(el('line', { x1: M.l, x2: M.l + iw, y1: M.t + ih, y2: M.t + ih, class: 'axis' }));
+  // x ticks on a round step, not five evenly-spaced fractions: an 8-day window
+  // split into fifths prints +0, +2, +3, +5, +6, which reads as a broken axis.
+  const xt = niceScale(xlo, xhi, 4).ticks.filter(v => v >= xlo - 1e-9 && v <= xhi + 1e-9);
+  const xticks = xt.length >= 2 ? xt : [xlo, xhi];
+  xticks.forEach((v, i) => {
+    svg.appendChild(el('text', {
+      x: X(v), y: M.t + ih + 20, class: 'xlab',
+      'text-anchor': i === 0 ? 'start'
+        : (i === xticks.length - 1 && v >= xhi - (xhi - xlo) * 0.02) ? 'end' : 'middle',
+    }, spec.xfmt(v)));
+  });
+  if (spec.xLabel) {
+    svg.appendChild(el('text', {
+      x: M.l + iw / 2, y: H - 8, class: 'axlab',
+    }, spec.xLabel));
+  }
+
+  if (spec.marker !== undefined && spec.marker >= xlo && spec.marker <= xhi) {
+    svg.appendChild(el('line', {
+      x1: X(spec.marker), x2: X(spec.marker), y1: M.t, y2: M.t + ih, class: 'marker',
+    }));
+    svg.appendChild(el('text', {
+      x: X(spec.marker) + 5, y: M.t + 11, class: 'markerlab',
+    }, spec.markerLabel || ''));
+  }
+
+  const labels = [];
+  spec.series.forEach(s => {
+    // a null breaks the path rather than drawing a straight line across a gap
+    let d = '', pen = false, lastY = null;
+    s.values.forEach((v, i) => {
+      if (v === null || !isFinite(v)) { pen = false; return; }
+      const px = X(s.x0 + i), py = Y(v);
+      d += (pen ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
+      pen = true; lastY = py;
+    });
+    if (!d) return;
+    svg.appendChild(el('path', {
+      d, fill: 'none', stroke: s.color, 'stroke-width': s.dash ? 2 : 2.4,
+      'stroke-dasharray': s.dash ? '6 4' : null,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+    }));
+    if (lastY !== null) labels.push({ y: lastY, name: s.name, color: s.color });
+  });
+
+  declutter(labels, 15).forEach(l => {
+    svg.appendChild(el('text', {
+      x: M.l + iw + 8, y: Math.min(Math.max(l.y + 4, 12), H - 4),
+      class: 'endlab', fill: l.color,
+    }, l.name));
+  });
+
+  mount.innerHTML = '';
+  mount.appendChild(svg);
+}
+
+const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '%';
+
+function renderBettingCharts(b) {
+  const mount = byId('bet-charts');
+  if (!mount || !b || !b.markets) return;
+  mount.innerHTML = '';
+  b.markets.forEach(m => {
+    const fig = document.createElement('figure');
+    fig.className = 'chartfig';
+    const box = document.createElement('div');
+    fig.appendChild(box);
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<b>${esc(m.label)}</b> — cumulative LiveBetting return.`;
+    fig.appendChild(cap);
+    mount.appendChild(fig);
+
+    let bi = 0;
+    const series = m.series.map(s => ({
+      name: s.name, x0: s.start, values: s.values,
+      dash: s.kind === 'human',
+      color: SERIES_COLORS[s.name] || (s.kind === 'human'
+        ? BASELINE_COLORS[bi++ % BASELINE_COLORS.length] : 'var(--s-grey)'),
+    }));
+    lineChart(box, {
+      series, height: 300,
+      alt: `Cumulative LiveBetting return on ${m.label}, by model and baseline`,
+      xLabel: 'Days since nowcasting start',
+      fmt: v => pct(v), xfmt: v => '+' + Math.round(v),
+    });
+  });
+}
+
+function renderCaseCharts(c) {
+  const mount = byId('case-charts');
+  if (!mount || !c || !c.panels) return;
+  mount.innerHTML = '';
+  c.panels.forEach(p => {
+    const fig = document.createElement('figure');
+    fig.className = 'chartfig';
+    const box = document.createElement('div');
+    fig.appendChild(box);
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<b>${esc(p.label)}</b> — ${esc(p.unit)}. `
+      + 'The dashed line marks 10:30 ET, April 8, 2026.';
+    fig.appendChild(cap);
+    mount.appendChild(fig);
+
+    const t0 = new Date(p.start + ':00');
+    const hoursTo = iso => (new Date(iso + ':00') - t0) / 3.6e6;
+    lineChart(box, {
+      series: [{ name: 'GPT-5', x0: 0, values: p.values, color: 'var(--accent)' }],
+      height: 262, labelWidth: 66,
+      alt: `GPT-5 nowcasts for ${p.label}`,
+      xLabel: 'Nowcast time',
+      marker: hoursTo(p.event) / p.step_hours,
+      markerLabel: 'Apr 8',
+      fmt: (v, dp) => v.toFixed(dp),
+      xfmt: v => {
+        const d = new Date(t0.getTime() + v * p.step_hours * 3.6e6);
+        return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+      },
+    });
+  });
+}
+
+fetch('data/series.json?v=' + Date.now())
+  .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+  .then(s => { renderBettingCharts(s.betting); renderCaseCharts(s.case_study); })
+  .catch(e => console.warn('LiveMacroEval: charts unavailable —', e.message || e));

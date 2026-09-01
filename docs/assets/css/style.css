@@ -305,3 +305,59 @@ footer {
 footer a { color: var(--fg-muted); }
 footer a:hover { color: var(--accent-ink); }
 footer .sep { color: var(--border); padding: 0 4px; }
+
+/* ---------------------------------------------------------------- charts --
+   The line figures are drawn as inline SVG from data/series.json instead of
+   shipped as PNGs, so they inherit the page's type and respond to the theme.
+
+   The series palette is the paper's own model palette, so a model reads the
+   same colour here as in the figures. Each has a lightened dark-mode twin:
+   the mid-tones that sit well on white go muddy on near-black. */
+:root {
+  --s-purple:  #8f63b8;
+  --s-slate:   #7488b8;
+  --s-gold:    #c47f17;
+  --s-teal-lt: #5aa9a9;
+  --s-blue:    #4a6b8a;
+  --s-olive:   #6b8a4a;
+  --s-brown:   #a37c52;
+  --s-grey:    #868d99;
+  --grid: #e6e9ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --s-purple:  #b48fd8;
+    --s-slate:   #9aabd4;
+    --s-gold:    #e0a341;
+    --s-teal-lt: #7fcaca;
+    --s-blue:    #7f9fbf;
+    --s-olive:   #9cbb72;
+    --s-brown:   #c9a179;
+    --s-grey:    #9aa1ad;
+    --grid: #2a2f38;
+  }
+}
+/* No :root[data-theme="dark"] twin on purpose: the page's own tokens (see the
+   :root block above) support only the media query, so adding one here would let
+   the chart colours flip to their dark variants while the page stayed light. */
+
+figure.chartfig { margin: 0 auto 30px; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart .grid   { stroke: var(--grid); stroke-width: 1; }
+svg.chart .axis   { stroke: var(--fg-muted); stroke-width: 1.2; }
+/* zero is break-even on the betting charts and the consensus line on scores,
+   so it is drawn heavier than a gridline but lighter than a series */
+svg.chart .zero   { stroke: var(--fg-faint); stroke-width: 1.4; }
+svg.chart .marker { stroke: var(--fg-faint); stroke-width: 1.4; stroke-dasharray: 5 4; }
+svg.chart text    { font-family: var(--text); }
+svg.chart .ylab   { font-size: 12px; fill: var(--fg-muted); text-anchor: end; }
+svg.chart .xlab   { font-size: 12px; fill: var(--fg-muted); text-anchor: middle; }
+svg.chart .axlab  { font-size: 12.5px; fill: var(--fg-muted); text-anchor: middle; }
+svg.chart .markerlab { font-size: 11px; fill: var(--fg-faint); }
+/* direct end-labels rather than a legend box — the paper figures label lines
+   in place, and it removes a colour-matching step for the reader */
+svg.chart .endlab { font-size: 12.5px; font-weight: 600; dominant-baseline: middle; }
+
+@media (max-width: 560px) {
+  svg.chart .endlab, svg.chart .ylab, svg.chart .xlab { font-size: 15px; }
+}

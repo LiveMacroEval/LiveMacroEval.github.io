@@ -148,6 +148,72 @@ def m_delete_required(d: Path):
     (d / "data/leaderboard.json").unlink()
 
 
+# ---- series.json (the line-chart data added 2026-09-01) -------------------
+# series.json is the one file allowed to hold a numeric series, so it needs its
+# own adversarial cases: the generic comma-run sniffer is deliberately exempted
+# there and check_series() carries the load instead.
+
+def _series(d: Path) -> dict:
+    return json.loads((d / "data/series.json").read_text())
+
+def _write_series(d: Path, obj: dict):
+    (d / "data/series.json").write_text(json.dumps(obj, separators=(",", ":")))
+
+def m_series_hourly_dump(d: Path):
+    """The whole point of the caps: an hourly curve must not fit."""
+    o = _series(d)
+    o["betting"]["markets"][0]["series"][0]["values"] = [
+        round(i * 0.1, 1) for i in range(1500)]
+    _write_series(d, o)
+
+def m_series_raw_nowcasts(d: Path):
+    """Per-hour model output smuggled alongside the smoothed curve."""
+    o = _series(d)
+    o["case_study"]["panels"][0]["raw"] = [2.412, 2.398, 2.401, 2.377]
+    _write_series(d, o)
+
+def m_series_subdaily_grid(d: Path):
+    o = _series(d)
+    o["betting"]["markets"][0]["step_days"] = 0
+    _write_series(d, o)
+
+def m_series_fine_case_grid(d: Path):
+    o = _series(d)
+    o["case_study"]["panels"][0]["step_hours"] = 1
+    _write_series(d, o)
+
+def m_series_full_precision(d: Path):
+    """Unrounded values expose more of the underlying than the chart needs."""
+    o = _series(d)
+    o["betting"]["markets"][0]["series"][0]["values"][0] = 12.34567890123
+    _write_series(d, o)
+
+def m_series_case_full_precision(d: Path):
+    o = _series(d)
+    o["case_study"]["panels"][0]["values"][0] = 2.4123456789
+    _write_series(d, o)
+
+def m_series_extra_top_key(d: Path):
+    o = _series(d)
+    o["overlay"] = {"rows": [1, 2, 3]}
+    _write_series(d, o)
+
+def m_series_oversized(d: Path):
+    o = _series(d)
+    o["_comment"] = "x" * 40000
+    _write_series(d, o)
+
+def m_series_too_many_numbers(d: Path):
+    """Under the per-curve cap, but far too many curves."""
+    o = _series(d)
+    mk = o["betting"]["markets"][0]
+    proto = mk["series"][0]
+    mk["series"] = [dict(proto, name=f"arm{i}") for i in range(12)]
+    for m2 in o["betting"]["markets"][1:]:
+        m2["series"] = [dict(proto, name=f"arm{i}") for i in range(12)]
+    _write_series(d, o)
+
+
 CASES = [
     ("raw overlay CSV dropped in docs/",          m_raw_csv,             "not on the allowlist"),
     ("overlay CSV renamed to .txt",               m_csv_renamed_txt,     "not on the allowlist"),
@@ -170,6 +236,15 @@ CASES = [
     ("malformed date field",                      m_bad_date,            "YYYY-MM-DD"),
     ("source field leaking a filesystem path",    m_source_leaks_path,   "leaks a filesystem path"),
     ("required file deleted",                     m_delete_required,     "is missing"),
+    ("series.json: hourly curve dump",            m_series_hourly_dump,  "exceeds the"),
+    ("series.json: raw nowcasts smuggled in",     m_series_raw_nowcasts, "unexpected key"),
+    ("series.json: sub-daily betting grid",       m_series_subdaily_grid, "step_days"),
+    ("series.json: sub-6h case-study grid",       m_series_fine_case_grid, "finer than"),
+    ("series.json: unrounded betting values",     m_series_full_precision, "rounded"),
+    ("series.json: unrounded case-study values",  m_series_case_full_precision, "dp"),
+    ("series.json: unexpected top-level key",     m_series_extra_top_key, "unexpected top-level"),
+    ("series.json: inflated past byte cap",       m_series_oversized,    "exceeds the"),
+    ("series.json: too many numeric literals",    m_series_too_many_numbers, "cap"),
 ]
 
 

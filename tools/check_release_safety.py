@@ -50,6 +50,7 @@ ALLOWED_FILES = {
     "assets/css/style.css",
     "assets/js/main.js",
     "data/leaderboard.json",
+    "data/series.json",
 }
 ALLOWED_FILES |= {f"assets/figures/{name}" for name in FIGURES}
 
@@ -78,6 +79,33 @@ IMAGE_MAGIC = {
 MAX_JSON_BYTES = 32 * 1024
 MAX_ARRAY_LEN = 30        # a per-release or hourly series is far longer
 MAX_NUMERIC_LITERALS = 150  # the real file holds ~25
+
+# --------------------------------------------------------------------------
+# 2b. series.json -- the line charts, drawn on the page instead of shipped as
+# PNGs. This file DOES hold time series, which leaderboard.json deliberately
+# forbids, so it gets its OWN caps rather than relaxing the ones above: the
+# leaderboard's job is to stay one row per model, and that must not change
+# because the charts arrived.
+#
+# What makes the series publishable at all (decision 2026-09-01):
+#   * betting curves are cumulative RETURN PERCENTAGES derived from our own
+#     bets and PUBLIC Polymarket prices. Polymarket is not among the withheld
+#     sources (Bloomberg ECOS, FirstRateData ES bars, the Investing calendar),
+#     so nothing non-redistributable can be reconstructed from them.
+#   * case-study panels publish a SMOOTHED CURVE only. The per-hour nowcasts
+#     behind it are not published; `raw` is rejected outright below so a later
+#     edit cannot quietly add them.
+#   * both are already public as PNGs in the paper. This changes precision,
+#     not kind.
+# The caps are sized just above the real payload (~5.5 KB, ~830 points), so a
+# full hourly dump (>1,400 points per market) still cannot fit.
+SERIES_MAX_BYTES = 24 * 1024
+SERIES_MAX_LEN = 200          # longest single curve; hourly would be 1,400+
+SERIES_MAX_NUMERIC = 1200     # the real file holds ~830
+SERIES_MAX_MARKETS = 8
+SERIES_MAX_CURVES = 12        # per market
+SERIES_BETTING_DP = 1         # betting values rounded to 0.1pp
+SERIES_CASE_DP = 3
 
 S = str
 N = (int, float)
@@ -129,6 +157,9 @@ LEAK_PATTERNS = [
 ]
 # docs/ is published content only; nothing in it may name a private path.
 PROSE_EXEMPT: set[str] = set()
+# Only series.json may carry a numeric run -- check_series() validates it far
+# more tightly than the generic sniffer could. Keep this set to exactly one file.
+NUMBER_RUN_EXEMPT = {"data/series.json"}
 
 # A delimiter-separated row: >=4 separators and >=3 numeric fields.
 CSV_ROW_RE = re.compile(r"^[^,\t]*([,\t][^,\t]*){4,}$")
@@ -266,6 +297,112 @@ def count_numbers(o) -> int:
     return 0
 
 
+def _round_ok(v: float, dp: int) -> bool:
+    return abs(v - round(v, dp)) < 1e-9
+
+
+def check_series() -> None:
+    """series.json: time series are allowed here, but only coarsened ones.
+
+    Validated explicitly rather than through walk_schema, so the leaderboard's
+    schema and its messages stay untouched.
+    """
+    f = SITE / "data/series.json"
+    if not f.exists():
+        return  # optional; the allowlist pass reports an unexpected file
+    raw = f.read_bytes()
+    if len(raw) > SERIES_MAX_BYTES:
+        fail(f"data/series.json: {len(raw):,} bytes exceeds the "
+             f"{SERIES_MAX_BYTES:,} cap")
+    try:
+        d = json.loads(raw)
+    except json.JSONDecodeError as e:
+        fail(f"data/series.json is not valid JSON: {e}")
+        return
+
+    allowed_top = {"_comment", "betting", "case_study"}
+    extra = set(d) - allowed_top
+    if extra:
+        fail(f"data/series.json: unexpected top-level key(s) {sorted(extra)}")
+
+    n_pts = 0
+
+    bet = d.get("betting", {})
+    markets = bet.get("markets", [])
+    if len(markets) > SERIES_MAX_MARKETS:
+        fail(f"data/series.json: {len(markets)} betting markets exceeds "
+             f"{SERIES_MAX_MARKETS}")
+    for m in markets:
+        extra = set(m) - {"key", "label", "step_days", "series"}
+        if extra:
+            fail(f"data/series.json betting market {m.get('key')!r}: "
+                 f"unexpected key(s) {sorted(extra)}")
+        if m.get("step_days", 0) < 1:
+            fail(f"data/series.json betting market {m.get('key')!r}: step_days "
+                 f"must be >= 1 day -- a finer grid is an hourly dump")
+        curves = m.get("series", [])
+        if len(curves) > SERIES_MAX_CURVES:
+            fail(f"data/series.json market {m.get('key')!r}: {len(curves)} "
+                 f"curves exceeds {SERIES_MAX_CURVES}")
+        for c in curves:
+            extra = set(c) - {"name", "kind", "start", "values"}
+            if extra:
+                fail(f"data/series.json curve {c.get('name')!r}: unexpected "
+                     f"key(s) {sorted(extra)}")
+            vals = c.get("values", [])
+            if len(vals) > SERIES_MAX_LEN:
+                fail(f"data/series.json curve {c.get('name')!r}: {len(vals)} "
+                     f"points exceeds the {SERIES_MAX_LEN} cap")
+            n_pts += len(vals)
+            for v in vals:
+                if v is None:
+                    continue
+                if not isinstance(v, (int, float)) or isinstance(v, bool):
+                    fail(f"data/series.json curve {c.get('name')!r}: non-numeric "
+                         f"point {v!r}")
+                elif not _round_ok(float(v), SERIES_BETTING_DP):
+                    fail(f"data/series.json curve {c.get('name')!r}: {v} carries "
+                         f"more than {SERIES_BETTING_DP} dp -- betting curves "
+                         f"must be published rounded")
+
+    cs = d.get("case_study", {})
+    panels = cs.get("panels", [])
+    if len(panels) > SERIES_MAX_MARKETS:
+        fail(f"data/series.json: {len(panels)} case-study panels exceeds "
+             f"{SERIES_MAX_MARKETS}")
+    for pn in panels:
+        extra = set(pn) - {"key", "label", "unit", "start", "step_hours",
+                           "event", "values"}
+        if extra:
+            fail(f"data/series.json panel {pn.get('key')!r}: unexpected key(s) "
+                 f"{sorted(extra)} -- raw per-hour nowcasts must NOT be published")
+        if pn.get("step_hours", 0) < 6:
+            fail(f"data/series.json panel {pn.get('key')!r}: step_hours "
+                 f"{pn.get('step_hours')!r} is finer than the 6h floor")
+        vals = pn.get("values", [])
+        if len(vals) > SERIES_MAX_LEN:
+            fail(f"data/series.json panel {pn.get('key')!r}: {len(vals)} points "
+                 f"exceeds the {SERIES_MAX_LEN} cap")
+        n_pts += len(vals)
+        for v in vals:
+            if not isinstance(v, (int, float)) or isinstance(v, bool):
+                fail(f"data/series.json panel {pn.get('key')!r}: non-numeric "
+                     f"point {v!r}")
+            elif not _round_ok(float(v), SERIES_CASE_DP):
+                fail(f"data/series.json panel {pn.get('key')!r}: {v} carries more "
+                     f"than {SERIES_CASE_DP} dp")
+
+    n = count_numbers(d)
+    if n > SERIES_MAX_NUMERIC:
+        fail(f"data/series.json holds {n} numeric literals, over the "
+             f"{SERIES_MAX_NUMERIC} cap -- the charts publish a downsampled "
+             "curve, not the hourly series")
+
+    notes.append(f"series.json: {len(markets)} betting markets, {len(panels)} "
+                 f"case-study panels, {n_pts} plotted points, {len(raw):,} bytes "
+                 "-- all within caps")
+
+
 def check_leaderboard() -> None:
     f = SITE / "data/leaderboard.json"
     if not f.exists():
@@ -324,7 +461,12 @@ def check_content() -> None:
 
         if BASE64_BLOB_RE.search(text):
             fail(f"{rel}: long base64 blob -- data may be embedded inline")
-        if NUMBER_RUN_RE.search(text):
+        # series.json is the ONE file allowed to hold a numeric series, and it is
+        # validated structurally by check_series() instead -- shape, per-curve
+        # length, rounding, step floor and total point count. Exempting it here
+        # removes no coverage; it swaps a generic sniff for a stricter check.
+        # Every other file, this one included in spirit, still fails on a run.
+        if rel not in NUMBER_RUN_EXEMPT and NUMBER_RUN_RE.search(text):
             fail(f"{rel}: a long run of comma-separated decimals -- "
                  "a numeric series appears to be embedded inline")
 
@@ -370,6 +512,7 @@ def main() -> int:
     check_allowlist()
     check_images()
     check_leaderboard()
+    check_series()
     check_content()
     check_gitignore()
 
