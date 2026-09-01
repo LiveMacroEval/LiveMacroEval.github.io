@@ -320,15 +320,57 @@ function lineChart(mount, spec) {
   mount.innerHTML = '';
   mount.className = 'chartbox';
   mount.appendChild(svg);
-  const tip = document.createElement('div');
-  tip.className = 'tip';
-  mount.appendChild(tip);
+
+  /* The readout is a fixed strip UNDER the chart, the same width as it, with
+     the series flowing left-to-right. An overlay box tall enough for eight
+     stacked rows covered the plot it was describing; laid out horizontally the
+     same information is three short lines and never moves. It also has a
+     resting state -- the final value of every series -- so the panel is useful
+     before anyone hovers and the page does not reflow when they do. */
+  const read = document.createElement('div');
+  read.className = 'readout';
+  mount.appendChild(read);
+
+  const lastIdx = s => {
+    for (let i = s.values.length - 1; i >= 0; i--) {
+      if (s.values[i] !== null && isFinite(s.values[i])) return i;
+    }
+    return -1;
+  };
+  function paint(xv, resting) {
+    const rows = [];
+    spec.series.forEach((s, k) => {
+      const i = resting ? lastIdx(s) : xv - s.x0;
+      const v = s.values[i];
+      if (i < 0 || i >= s.values.length || v === null || !isFinite(v)) {
+        dots[k].setAttribute('opacity', 0);
+        return;
+      }
+      if (resting) {
+        dots[k].setAttribute('opacity', 0);
+      } else {
+        dots[k].setAttribute('cx', X(xv));
+        dots[k].setAttribute('cy', Y(v));
+        dots[k].setAttribute('fill', s.color);
+        dots[k].setAttribute('opacity', 1);
+      }
+      rows.push({ name: s.name, color: s.color, v });
+    });
+    if (!rows.length) return false;
+    rows.sort((a, b) => b.v - a.v);
+    const head = resting ? 'Final' : (spec.xtipfmt || spec.xfmt)(xv);
+    read.innerHTML = `<span class="rx">${esc(head)}</span>` + rows.map(r =>
+      `<span class="ri"><i style="background:${r.color}"></i>`
+      + `<span class="rn">${esc(r.name)}</span>`
+      + `<b>${esc(spec.tipfmt(r.v))}</b></span>`).join('');
+    return true;
+  }
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
-  function hide() {
-    tip.classList.remove('on');
+  function rest() {
     guide.setAttribute('opacity', 0);
     dots.forEach(d => d.setAttribute('opacity', 0));
+    paint(0, true);
   }
   function move(ev) {
     const ctm = svg.getScreenCTM();
@@ -338,42 +380,15 @@ function lineChart(mount, spec) {
     const loc = pt.matrixTransform(ctm.inverse());
     // nearest whole step, so the readout snaps to real points not interpolations
     const xv = Math.round(clamp(xlo + (loc.x - M.l) / iw * (xhi - xlo), xlo, xhi));
-    const rows = [];
-    spec.series.forEach((s, k) => {
-      const i = xv - s.x0, v = s.values[i];
-      if (i < 0 || i >= s.values.length || v === null || !isFinite(v)) {
-        dots[k].setAttribute('opacity', 0);
-        return;
-      }
-      dots[k].setAttribute('cx', X(xv));
-      dots[k].setAttribute('cy', Y(v));
-      dots[k].setAttribute('fill', s.color);
-      dots[k].setAttribute('opacity', 1);
-      rows.push({ name: s.name, color: s.color, v });
-    });
-    if (!rows.length) { hide(); return; }
-    rows.sort((a, b) => b.v - a.v);
+    if (!paint(xv, false)) { rest(); return; }
     guide.setAttribute('x1', X(xv));
     guide.setAttribute('x2', X(xv));
     guide.setAttribute('opacity', 1);
-    const xh = (spec.xtipfmt || spec.xfmt)(xv);
-    tip.innerHTML = `<div class="tx">${esc(xh)}</div>` + rows.map(r =>
-      `<div class="tr"><span class="sw" style="background:${r.color}"></span>`
-      + `<span class="tn">${esc(r.name)}</span>`
-      + `<span class="tv">${esc(spec.tipfmt(r.v))}</span></div>`).join('');
-    tip.classList.add('on');
-    // place beside the cursor, flipping before it runs off either edge
-    const box = mount.getBoundingClientRect();
-    const tw = tip.offsetWidth, th = tip.offsetHeight;
-    let left = ev.clientX - box.left + 14;
-    if (left + tw > box.width) left = ev.clientX - box.left - tw - 14;
-    tip.style.left = clamp(left, 0, Math.max(0, box.width - tw)) + 'px';
-    tip.style.top = clamp(ev.clientY - box.top - th - 12, 0,
-                          Math.max(0, box.height - th)) + 'px';
   }
+  rest();
   hit.addEventListener('pointermove', move);
   hit.addEventListener('pointerdown', move);
-  hit.addEventListener('pointerleave', hide);
+  hit.addEventListener('pointerleave', rest);
 }
 
 const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '%';

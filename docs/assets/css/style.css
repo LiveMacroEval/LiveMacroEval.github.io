@@ -366,23 +366,41 @@ svg.chart .endlab { font-size: 12.5px; font-weight: 600; dominant-baseline: midd
 }
 
 /* --- hover readout ------------------------------------------------------
-   The value shown is the plotted point itself -- the same rounded, downsampled
-   number already in series.json. Hovering reveals nothing the chart does not
-   already draw; it just saves reading against the axis. */
+   A strip under the chart, the same width as it, rather than a box floating
+   over it: with eight series a stacked tooltip was taller than the plot it
+   described. Laid out horizontally the same values wrap to two or three short
+   lines. It rests on the final value of every series, so it reads as a summary
+   when nobody is hovering, and the fixed position means the page never
+   reflows. The numbers are the plotted points themselves -- the same rounded,
+   downsampled values already in series.json. */
 .chartbox { position: relative; }
-.chartbox .tip {
-  position: absolute; z-index: 3; pointer-events: none; opacity: 0;
-  transition: opacity .09s ease-out;
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.10);
-  padding: 8px 10px; font-family: var(--text); font-size: 12.5px;
-  line-height: 1.5; color: var(--fg); min-width: 128px; max-width: 230px;
+.chartbox .readout {
+  margin-top: 10px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-soft);
+  padding: 8px 11px;
+  font-family: var(--text); font-size: 12px; line-height: 1.55;
+  color: var(--fg);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 15px;
 }
-.chartbox .tip.on { opacity: 1; }
-.chartbox .tip .tx { font-weight: 700; margin-bottom: 4px; color: var(--fg); }
-.chartbox .tip .tr { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
-.chartbox .tip .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-.chartbox .tip .tn { flex: 1; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; }
-.chartbox .tip .tv { font-weight: 600; font-variant-numeric: tabular-nums; }
+.chartbox .readout .rx {
+  font-weight: 700; font-variant-numeric: tabular-nums;
+  min-width: 4.6em;
+}
+.chartbox .readout .ri { display: inline-flex; align-items: baseline; gap: 5px; }
+.chartbox .readout .ri i {
+  width: 8px; height: 8px; border-radius: 2px; flex: none;
+  position: relative; top: 1px;
+}
+.chartbox .readout .rn { color: var(--fg-muted); }
+.chartbox .readout .ri b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
 svg.chart .hoverline { stroke: var(--fg-faint); stroke-width: 1; stroke-dasharray: 3 3; }
 svg.chart .hoverdot  { stroke: var(--bg); stroke-width: 1.6; }
+
+/* one series per line on a phone, where a wrapped row turns into a jumble */
+@media (max-width: 520px) {
+  .chartbox .readout { display: block; font-size: 13px; }
+  .chartbox .readout .ri { display: flex; justify-content: space-between; }
+  .chartbox .readout .rn { flex: 1; }
+}
