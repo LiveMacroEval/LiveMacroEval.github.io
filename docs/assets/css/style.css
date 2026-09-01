@@ -39,7 +39,10 @@
   --pos: var(--accent-ink);
   --neg: var(--warm-ink);
 
-  --max: 1200px;
+  /* the whole page is as wide as the paper title: .papertitle is 30em at its
+     22px cap, i.e. 660px, and the wrap adds 26px of padding on each side, so
+     nav, prose, tables, cards and every figure all share that one column */
+  --max: 712px;
   /* prose spans the full wrap, so a paragraph lines up with the nav:
      the brand on the left, the last nav link on the right */
   --measure: 100%;
@@ -172,7 +175,7 @@ h1.title span { color: var(--accent-ink); }
 section { padding: 58px 0; }
 section + section { border-top: 1px solid var(--border); }
 h2 {
-  font-family: var(--display); font-size: clamp(31px, 4.2vw, 48px); font-weight: 600;
+  font-family: var(--display); font-size: clamp(28px, 4.2vw, 38px); font-weight: 600;
   letter-spacing: -0.018em; line-height: 1.14; margin: 0 auto 26px;
   text-align: center;
 }
@@ -213,10 +216,10 @@ table { border-collapse: collapse; width: 100%; min-width: 540px; font-family: v
 table.narrow { min-width: 0; }
 thead th {
   text-align: left; font-size: 10.5px; color: var(--fg-muted); font-weight: 600;
-  padding: 11px 16px; border-bottom: 2px solid var(--fg);
+  padding: 11px 12px; border-bottom: 2px solid var(--fg);
   background: var(--bg-soft); white-space: nowrap;
 }
-tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr.ref td { background: var(--bg-soft); }
 /* caption row separating the two panels of the leaderboard */
@@ -241,11 +244,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 }
 .kind.llm   { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .kind.human { color: var(--warm-ink);   border-color: color-mix(in srgb, var(--warm) 45%, var(--border)); }
-.rowname { font-weight: 600; }
+/* in the narrow column the name must not wrap; the note under it may */
+.rowname { font-weight: 600; white-space: nowrap; }
 .rownote { display: block; font-size: 12.5px; color: var(--fg-faint); font-weight: 400; }
 
 /* bar cell */
-.barcell { width: 30%; min-width: 140px; }
+.barcell { width: 22%; min-width: 110px; }
 .bartrack { position: relative; height: 18px; background: var(--bg-soft); }
 .barzero { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--fg-faint); }
 .bar { position: absolute; top: 3px; height: 12px; }
