@@ -440,15 +440,39 @@ def emit_text(el, name, x, y, w, h, font_color):
 
 
 # ---- walk -----------------------------------------------------------------
+# Layout adjustment (user request, 2026-09-01). In the deck the gap between the
+# left boxes and the timeline block is 49.1pt but the gap on the right is 58.7pt
+# (room left for the Ground-Truth marker), and the timeline block sits 22.9pt
+# left of the figure's centre. A dry pass measures the slide, then: the right
+# block moves in so both box-to-box gaps equal the LEFT one, each black arrow is
+# centred in its gap, and the viewBox is centred on the timeline block (the
+# extra padding lands on the left, invisible on the white page; the white panel
+# itself stays symmetric around the content so dark mode shows an even card).
+LAYOUT = {}          # shape/group name -> x shift in pt, filled after the dry pass
+boxes = {}           # shape/group name -> absolute (x0, y0, x1, y1)
+DRY = True
+
+
+def shift_for(name):
+    dx = LAYOUT.get(name)
+    return [T(dx, 0, 1, 1, 0, 0)] if dx else []
+
+
 def walk(node, stack):
     for c in node:
         t = etree.QName(c).localname
         if t == 'grpSp':
+            name = c.find('.//p:cNvPr', ns).get('name')
+            st = stack + shift_for(name)
             xf = xfrm_of(c.find('p:grpSpPr', ns))
+            gx0, gy0 = apply(st, xf['x'], xf['y'])
+            gx1, gy1 = apply(st, xf['x'] + xf['w'], xf['y'] + xf['h'])
+            boxes[name] = (gx0, gy0, gx1, gy1)
             tr = T(xf['x'], xf['y'], xf['w'] / xf['cw'], xf['h'] / xf['ch'], xf['cx'], xf['cy'])
-            walk(c, stack + [tr])
+            walk(c, st + [tr])
         elif t in ('sp', 'cxnSp', 'pic'):
-            shape(c, t, stack)
+            name = c.find('.//p:cNvPr', ns).get('name')
+            shape(c, t, stack + shift_for(name))
 
 
 def shape(el, kind, stack):
@@ -460,6 +484,9 @@ def shape(el, kind, stack):
     x0, y0 = apply(stack, xf['x'], xf['y'])
     x1, y1 = apply(stack, xf['x'] + xf['w'], xf['y'] + xf['h'])
     w, h = x1 - x0, y1 - y0
+    boxes[name] = (x0, y0, x1, y1)
+    if DRY:
+        return
     geom = spPr.find('a:prstGeom', ns)
     prst = geom.get('prst') if geom is not None else None
     ln = resolve_line(el, spPr)
@@ -505,16 +532,43 @@ def shape(el, kind, stack):
 
 
 tree = etree.parse(SRC / 'ppt/slides/slide1.xml')
-walk(tree.find('.//p:spTree', ns), [])
+sp_tree = tree.find('.//p:spTree', ns)
+walk(sp_tree, [])                       # dry pass: measure only
+
+L1 = boxes['Rectangle 117'][2]          # left block: right edge of its boxes (= its header)
+M0, M1 = boxes['Rectangle 289'][0], boxes['Rectangle 289'][2]   # the LLM box spans the timeline
+R0 = min(boxes[n][0] for n in ('Rectangle 244', 'Rectangle 251', 'Rectangle 253'))
+gap = M0 - L1
+right_gap = R0 - M1
+la, ra = boxes['Straight Arrow Connector 116'], boxes['Straight Arrow Connector 25']
+arrow_w = ra[2] - ra[0]
+LAYOUT.update({
+    'Group 291': (M1 + gap) - R0,                          # right block, header included
+    'Straight Arrow Connector 116': (L1 + (gap - arrow_w) / 2) - la[0],
+    'Straight Arrow Connector 25': (M1 + (gap - arrow_w) / 2) - ra[0],
+})
+MIDDLE_CX = (M0 + M1) / 2
+print(f'gaps in the deck: left {gap:.2f}pt, right {right_gap:.2f}pt -> both {gap:.2f}pt; '
+      f'right block moves {LAYOUT["Group 291"]:+.2f}pt, arrows {LAYOUT["Straight Arrow Connector 116"]:+.2f} / '
+      f'{LAYOUT["Straight Arrow Connector 25"]:+.2f}pt')
+
+DRY = False
+out.clear()
+bounds[:] = [math.inf, math.inf, -math.inf, -math.inf]
+walk(sp_tree, [])
 
 PAD = 4.0
 bx0, by0, bx1, by1 = bounds
-vb = (bx0 - PAD, by0 - PAD, (bx1 - bx0) + 2 * PAD, (by1 - by0) + 2 * PAD)
+half = max(MIDDLE_CX - bx0, bx1 - MIDDLE_CX) + PAD
+vb = (MIDDLE_CX - half, by0 - PAD, 2 * half, (by1 - by0) + 2 * PAD)
+panel = (bx0 - PAD, by0 - PAD, (bx1 - bx0) + 2 * PAD, (by1 - by0) + 2 * PAD)
+print(f'timeline block centre x={MIDDLE_CX:.2f}, viewBox centre x={vb[0] + vb[2] / 2:.2f}, '
+      f'content x {bx0:.2f}..{bx1:.2f} (panel offset {MIDDLE_CX - (bx0 + bx1) / 2:+.2f}pt from centre)')
 header = (f'<svg class="fig1" viewBox="{f(vb[0])} {f(vb[1])} {f(vb[2])} {f(vb[3])}" '
           f'xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fig1-title">\n'
           '<title id="fig1-title">LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across '
           'the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines</title>\n'
-          f'<rect x="{f(vb[0])}" y="{f(vb[1])}" width="{f(vb[2])}" height="{f(vb[3])}" fill="#FFFFFF"/>\n')
+          f'<rect x="{f(panel[0])}" y="{f(panel[1])}" width="{f(panel[2])}" height="{f(panel[3])}" fill="#FFFFFF"/>\n')
 svg = header + '\n'.join(out) + '\n</svg>'
 print(f'content bounds {[round(v, 2) for v in bounds]}  viewBox {[round(v, 2) for v in vb]}')
 print(f'{len(out)} elements, {len(svg):,} bytes of SVG, icons in {OUT_ICONS}')

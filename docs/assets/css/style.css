@@ -281,10 +281,12 @@ figure.plain img { border: none; background: none; }
    part of the hero: centred, and the note keeps the standfirst's size */
 /* Figure 1 is drawn inline (vector shapes + real text rebuilt from the paper's
    figure1.pptx), so it can be wider than the text column and stay legible: it
-   breaks out to min(1080px, viewport - 52px) and is centred on the column,
-   which is itself centred on the page. Below 712px it is the column width. */
+   breaks out to min(1106px, viewport - 52px) and is centred on the column,
+   which is itself centred on the page. Below 712px it is the column width.
+   1106px = the 1080px the drawing had before its viewBox grew 26pt of
+   invisible left padding to put the timeline block on the page's centre. */
 .hero-fig {
-  --figw: min(1080px, 100vw - 52px);
+  --figw: min(1106px, 100vw - 52px);
   width: var(--figw);
   margin: 48px 0 0 calc(50% - var(--figw) / 2);
 }
