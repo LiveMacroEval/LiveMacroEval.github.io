@@ -42,6 +42,8 @@ ap.add_argument("--pptx", type=Path, default=DEFAULT_PPTX)
 ap.add_argument("--site", type=Path, default=SITE, help="docs/ directory to write into")
 ap.add_argument("--svg-only", type=Path, default=None,
                 help="write the SVG fragment here instead of splicing into index.html")
+ap.add_argument("--measure", type=Path, default=None,
+                help="also write a JSON manifest of every text line and the width it must fit")
 args = ap.parse_args()
 if not args.pptx.exists():
     sys.exit(f"pptx not found: {args.pptx}")
@@ -72,6 +74,61 @@ TINS = BINS = 3.6                # (0.05 in)
 ASC = 0.952                      # Helvetica Neue ascent, baseline from line top
 LH = 1.2                         # PowerPoint single spacing
 ICON_PX_PER_PT = 4               # never upscale; downscale big icons to this
+
+# ---- site style (2026-09-01) ----------------------------------------------
+# Geometry stays the deck's; type and colour follow the site. The deck's
+# literal colours are remapped to the page tokens, so the figure takes the
+# palette and its dark mode from style.css. Anything unlisted stays as drawn.
+COLOR_MAP = {
+    '#298C8C': 'var(--accent-ink)',   # TASKS bar -- the deck's teal is the site accent
+    '#062955': 'var(--fg)',           # NOWCASTING TIMELINE bar -- newspaper black
+    '#8F63B8': 'var(--warm-ink)',     # EVALUATION bar -- the site's warm family
+    '#042433': 'var(--fg-muted)',     # card outlines (theme accent1 shaded to 15%)
+    '#065DC9': 'var(--s-blue)',       # ARIMA      } the charts' baseline palette,
+    '#094FA7': 'var(--s-olive)',      # Fed        } left to right
+    '#083C7D': 'var(--s-brown)',      # Bloomberg  }
+    '#D97757': 'var(--warm)',         # Claude logo -- the paper orange itself
+    '#000000': 'var(--fg)',
+    '#FFFFFF': 'var(--bg)',
+}
+CARD_BOXES = {'Rectangle 117', 'Rectangle 150', 'Rectangle 151', 'Rectangle 152',
+              'Rectangle 244', 'Rectangle 251', 'Rectangle 253'}
+CARD_STROKE = 1.2                # the deck's 1.5pt reads heavy beside the site's hairlines
+STAR = 'Graphic 63'              # the release marker gets the warm accent
+ICON_INK = {'factory', 'housing', 'cart', 'briefcase', 'target', 'theme', 'arima', 'fed'}
+DISPLAY, TEXT = 'f1-serif', 'f1-sans'   # svg text classes (prefixed: the page has its own .note etc.)
+# Titles take the serif display face like the site's section headings and
+# cards; everything else is Libre Franklin. (name, paragraph) -> (class, weight).
+FONT_ROLE = {
+    ('TextBox 21', 0): (DISPLAY, 600), ('TextBox 22', 0): (DISPLAY, 600), ('TextBox 130', 0): (DISPLAY, 600),
+    ('TextBox 4', 0): (DISPLAY, 600), ('TextBox 5', 0): (DISPLAY, 600),
+    ('TextBox 6', 0): (DISPLAY, 600), ('TextBox 7', 0): (DISPLAY, 600),
+    ('Rectangle 32', 0): (DISPLAY, 600), ('Rectangle 39', 0): (DISPLAY, 600), ('Rectangle 48', 0): (DISPLAY, 600),
+    ('TextBox 140', 0): (DISPLAY, 600), ('TextBox 141', 0): (DISPLAY, 600), ('TextBox 145', 0): (DISPLAY, 600),
+    ('TextBox 81', 0): (DISPLAY, 400),
+    ('TextBox 65', 0): (TEXT, 700),
+}
+# Site faces run wider than the deck's Helvetica Neue. Measured with the real
+# webfonts (tools/build_figure1.py --measure + a headless-Chrome pass): the
+# family titles overflow their cards at 14pt (and clear the border by only
+# 1pt at 13) and the bar subtitles touch the bar edges at 12pt, so they are
+# set smaller. (name, paragraph) -> pt.
+SIZE_OVERRIDE = {
+    ('TextBox 4', 0): 12.5, ('TextBox 5', 0): 12.5, ('TextBox 6', 0): 12.5, ('TextBox 7', 0): 12.5,
+    ('TextBox 21', 1): 11, ('TextBox 22', 1): 11, ('TextBox 130', 1): 11,
+}
+# The cadence notes are left-aligned frames the deck placed so they LOOK
+# centred under each baseline box; anchor them on the frame centre so they
+# stay centred in any face.
+CENTRE_NOTES = {'TextBox 1', 'TextBox 24', 'TextBox 28'}
+measures = []                    # every text line with the width it must fit in
+
+
+def css(c):
+    """Literal deck colour -> site token where one is mapped."""
+    if isinstance(c, str) and c.startswith('#'):
+        return COLOR_MAP.get(c.upper(), c)
+    return c
 
 # Line breaks exactly as PowerPoint wrapped them in the exported PNG.
 # key: shape name -> list of paragraphs -> list of lines. Paragraphs not
@@ -243,7 +300,7 @@ def dasharray(d, w):
 def stroke_attrs(ln):
     if ln is None:
         return 'stroke="none"'
-    s = f'stroke="{ln["color"]}" stroke-width="{f(ln["w"])}"'
+    s = f'stroke="{css(ln["color"])}" stroke-width="{f(ln["w"])}"'
     da = dasharray(ln['dash'], ln['w'])
     if da:
         s += f' stroke-dasharray="{da}"'
@@ -263,7 +320,7 @@ def arrow_head(x0, y0, x1, y1, ln):
     bx, by = x1 - ux * L, y1 - uy * L            # base centre
     px, py = -uy * W / 2, ux * W / 2             # half-width perpendicular
     pts = f'{f(x1)} {f(y1)} {f(bx + px)} {f(by + py)} {f(bx - px)} {f(by - py)}'
-    return f'<polygon points="{pts}" fill="{ln["color"]}" stroke="none"/>', (bx, by)
+    return f'<polygon points="{pts}" fill="{css(ln["color"])}" stroke="none"/>', (bx, by)
 
 
 # ---- media ----------------------------------------------------------------
@@ -298,6 +355,18 @@ def export_icon(media, src_rect, w_pt, h_pt):
     name = ICON_NAMES[media.name]
     im = Image.open(media)
     W, H = im.size
+    if name in ICON_INK:
+        # Black line art. Several sources carry an opaque white ground (some
+        # inside an RGBA file), so luminance becomes alpha -- capped by any
+        # real alpha -- and the ink is forced to black. The icon then sits on
+        # any page colour and inverts cleanly in dark mode.
+        import numpy as np
+        rgba_src = np.asarray(im.convert('RGBA')).astype('int32')
+        lum = (0.299 * rgba_src[..., 0] + 0.587 * rgba_src[..., 1] + 0.114 * rgba_src[..., 2])
+        alpha = np.minimum(rgba_src[..., 3], 255 - lum).clip(0, 255).astype('uint8')
+        rgba = np.zeros((H, W, 4), 'uint8')
+        rgba[..., 3] = alpha
+        im = Image.fromarray(rgba, 'RGBA')
     l = t = r = b = 0.0
     if src_rect is not None:
         l = int(src_rect.get('l', 0)) / 100000
@@ -323,7 +392,7 @@ def export_icon(media, src_rect, w_pt, h_pt):
     return f'{ICON_HREF}{name}.png', canvas.size
 
 
-def inline_svg(media, x, y, w, h, label):
+def inline_svg(media, x, y, w, h, label, fill_override=None):
     """Embed a vector logo as a group of paths, stretched to the frame the way
     PowerPoint stretches it (non-uniform for Claude/Qwen: 59.36 x 62.78)."""
     root = etree.parse(media).getroot()
@@ -336,6 +405,10 @@ def inline_svg(media, x, y, w, h, label):
         if tag == 'path':
             attrs = {k: v for k, v in el.attrib.items() if k not in ('class',)}
             attrs.setdefault('fill', '#000000')
+            if fill_override:
+                attrs['fill'] = fill_override
+            elif not attrs['fill'].startswith('url('):
+                attrs['fill'] = css(attrs['fill'])
             body.append('<path ' + ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + '/>')
         elif tag == 'linearGradient':
             stops = ''.join(f'<stop offset="{s.get("offset")}" stop-color="{s.get("stop-color")}"'
@@ -409,19 +482,23 @@ def emit_text(el, name, x, y, w, h, font_color):
         assert len(sizes) == 1, (name, sizes)
         styles = {(rp['b'], rp['i'], rp['color'], rp['font']) for t, rp in runs if t.strip()}
         assert len(styles) == 1, (name, styles)
-        sz = sizes.pop()
+        sz = SIZE_OVERRIDE.get((name, pi), sizes.pop())
         b, i, col, fnt = styles.pop()
         lines = WRAP.get(name, {}).get(pi, [text])
         assert ' '.join(lines) == text, (name, pi, lines, text)
         col = col or font_color or '#000000'
-        attrs = f'font-size="{f(sz)}"'
-        if b:
-            attrs += ' font-weight="700"'
+        role, wt = FONT_ROLE.get((name, pi), (TEXT, 700 if b else 400))
+        cls = role
+        if col.upper() == '#FFFFFF':
+            cls += ' f1-bar'                      # text on a filled bar: inverts with the bar
+        elif i:
+            cls += ' f1-note'                     # the cadence notes, quieter than the titles
+        attrs = f'class="{cls}" font-size="{f(sz)}"'
+        if wt != 400:
+            attrs += f' font-weight="{wt}"'
         if i:
             attrs += ' font-style="italic"'
-        if col != '#000000':
-            attrs += f' fill="{col}"'
-        if pp['algn'] == 'ctr':
+        if pp['algn'] == 'ctr' or name in CENTRE_NOTES:
             attrs += ' text-anchor="middle"'
             tx = x + w / 2
         else:
@@ -431,8 +508,10 @@ def emit_text(el, name, x, y, w, h, font_color):
             base = cursor + ASC * sz
             if li == 0 and pp['bu']:
                 bx = x + LINS + pp['marL'] + pp['indent']
-                spans.append(f'<tspan x="{f(bx)}" y="{f(base)}" font-family="Arial, sans-serif">{esc(pp["bu"])}</tspan>')
+                spans.append(f'<tspan x="{f(bx)}" y="{f(base)}">{esc(pp["bu"])}</tspan>')
             spans.append(f'<tspan x="{f(tx)}" y="{f(base)}">{esc(line)}</tspan>')
+            measures.append({'shape': name, 'text': line, 'cls': role, 'weight': wt, 'italic': bool(i),
+                             'size': sz, 'max': round(w - LINS - RINS - (pp['marL'] if pp['bu'] else 0), 2)})
             cursor += LH * sz
         cursor += pp['spcAft']
         pieces.append(f'<text {attrs}>' + ''.join(spans) + '</text>')
@@ -490,6 +569,8 @@ def shape(el, kind, stack):
     geom = spPr.find('a:prstGeom', ns)
     prst = geom.get('prst') if geom is not None else None
     ln = resolve_line(el, spPr)
+    if ln and name in CARD_BOXES:
+        ln['w'] = CARD_STROKE
     grow(x0, y0, x1, y1)
 
     if kind == 'pic':
@@ -497,11 +578,12 @@ def shape(el, kind, stack):
         svg = el.find('.//asvg:svgBlip', ns)
         if svg is not None:
             media = rels[svg.get(R_EMBED)]
-            out.append(inline_svg(media, x0, y0, w, h, name))
+            out.append(inline_svg(media, x0, y0, w, h, name, 'var(--warm)' if name == STAR else None))
         else:
             media = rels[blip.get(R_EMBED)]
             href, _ = export_icon(media, el.find('.//a:srcRect', ns), w, h)
-            out.append(f'<image href="{href}" x="{f(x0)}" y="{f(y0)}" width="{f(w)}" height="{f(h)}" '
+            cls = 'f1-ink' if ICON_NAMES[media.name] in ICON_INK else 'f1-brand'
+            out.append(f'<image class="{cls}" href="{href}" x="{f(x0)}" y="{f(y0)}" width="{f(w)}" height="{f(h)}" '
                        f'preserveAspectRatio="none"/>')
         return
 
@@ -522,9 +604,9 @@ def shape(el, kind, stack):
     fill = resolve_fill(el, spPr)
     if prst == 'rect':
         if not (fill == 'none' and ln is None):
-            out.append(f'<rect x="{f(x0)}" y="{f(y0)}" width="{f(w)}" height="{f(h)}" fill="{fill}" {stroke_attrs(ln)}/>')
+            out.append(f'<rect x="{f(x0)}" y="{f(y0)}" width="{f(w)}" height="{f(h)}" fill="{css(fill)}" {stroke_attrs(ln)}/>')
     elif prst == 'ellipse':
-        out.append(f'<ellipse cx="{f(x0 + w / 2)}" cy="{f(y0 + h / 2)}" rx="{f(w / 2)}" ry="{f(h / 2)}" fill="{fill}" {stroke_attrs(ln)}/>')
+        out.append(f'<ellipse cx="{f(x0 + w / 2)}" cy="{f(y0 + h / 2)}" rx="{f(w / 2)}" ry="{f(h / 2)}" fill="{css(fill)}" {stroke_attrs(ln)}/>')
     else:
         raise ValueError((name, prst))
     _, fcol = style_ref(el, 'fontRef')
@@ -568,11 +650,15 @@ header = (f'<svg class="fig1" viewBox="{f(vb[0])} {f(vb[1])} {f(vb[2])} {f(vb[3]
           f'xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fig1-title">\n'
           '<title id="fig1-title">LiveMacroEval pipeline: sixteen indicators, hourly LLM nowcasts across '
           'the pre-release window, scored against the market and against Fed, Bloomberg and ARIMA baselines</title>\n'
-          f'<rect x="{f(panel[0])}" y="{f(panel[1])}" width="{f(panel[2])}" height="{f(panel[3])}" fill="#FFFFFF"/>\n')
+          f'<rect class="f1-panel" x="{f(panel[0])}" y="{f(panel[1])}" width="{f(panel[2])}" height="{f(panel[3])}"/>\n')
 svg = header + '\n'.join(out) + '\n</svg>'
 print(f'content bounds {[round(v, 2) for v in bounds]}  viewBox {[round(v, 2) for v in vb]}')
 print(f'{len(out)} elements, {len(svg):,} bytes of SVG, icons in {OUT_ICONS}')
 
+if args.measure:
+    import json
+    args.measure.write_text(json.dumps(measures, indent=1))
+    print(f'wrote {len(measures)} text lines to {args.measure}')
 if args.svg_only:
     args.svg_only.write_text(svg + '\n')
     print(f'wrote {args.svg_only}')

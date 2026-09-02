@@ -279,21 +279,32 @@ figure img { width: 100%; height: auto; display: block; border: 1px solid var(--
 figure.plain img { border: none; background: none; }
 /* the pipeline figure sits directly under the banner, so it and its note are
    part of the hero: centred, and the note keeps the standfirst's size */
-/* Figure 1 is drawn inline (vector shapes + real text rebuilt from the paper's
-   figure1.pptx), so it can be wider than the text column and stay legible: it
-   breaks out to min(816px, viewport - 52px) and is centred on the column,
-   which is itself centred on the page. Below 712px it is the column width.
-   816px puts the visible drawing at 783px, the width of the caption's first
-   line at 19px -- the drawing fills 96% of the SVG box, the rest is invisible
+/* Figure 1 is drawn inline (vector shapes + real text, rebuilt from the paper's
+   figure1.pptx by tools/build_figure1.py) in the site's own type and palette:
+   titles in the display serif, everything else Libre Franklin, bars and
+   baselines on the page tokens, so it follows the theme like the charts do.
+   It breaks out of the text column to min(1020px, viewport - 52px), centred
+   on the column, which is itself centred on the page; below 712px it is the
+   column width. The drawing fills 96% of the SVG box -- the rest is invisible
    left padding that keeps the timeline block on the page's centre line. */
 .hero-fig {
-  --figw: min(816px, 100vw - 52px);
+  --figw: min(1020px, 100vw - 52px);
   width: var(--figw);
   margin: 48px 0 0 calc(50% - var(--figw) / 2);
 }
 .hero-fig .fig1 { width: 100%; height: auto; display: block; }
-/* the figure keeps the typeface it was drawn in, not the site's Libre Franklin */
-.hero-fig .fig1 text { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+/* class names are prefixed: the page's own .note (and any other short name)
+   would otherwise reach into the SVG and restyle its text */
+.fig1 .f1-panel     { fill: var(--bg); }
+.fig1 text          { font-family: var(--text); fill: var(--fg); }
+.fig1 text.f1-serif { font-family: var(--display); }
+.fig1 text.f1-bar   { fill: var(--bg); }        /* on a filled bar, so it inverts with it */
+.fig1 text.f1-note  { fill: var(--fg-muted); }  /* the cadence notes */
+/* the line-art icons are black on transparent; flip them with the theme.
+   .f1-brand (the Polymarket mark) keeps its own colour. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fig1 .f1-ink { filter: invert(1); }
+}
 .hero-fig figcaption {
   font-size: 19px; line-height: 1.5; color: var(--fg);
   text-align: center; margin: 16px auto 0; max-width: 44em;
