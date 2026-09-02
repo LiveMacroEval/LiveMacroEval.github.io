@@ -84,9 +84,14 @@ COLOR_MAP = {
     '#062955': 'var(--fg)',           # NOWCASTING TIMELINE bar -- newspaper black
     '#8F63B8': 'var(--warm-ink)',     # EVALUATION bar -- the site's warm family
     '#042433': 'var(--fg-muted)',     # card outlines (theme accent1 shaded to 15%)
-    '#065DC9': 'var(--s-blue)',       # ARIMA      } the charts' baseline palette,
-    '#094FA7': 'var(--s-olive)',      # Fed        } left to right
-    '#083C7D': 'var(--s-brown)',      # Bloomberg  }
+    # The three baselines take the colours the LiveBetting charts give them
+    # (main.js: BASELINE_COLORS in order of appearance, reset per chart): the
+    # first Fed nowcast in every chart is s-blue, Bloomberg consensus is always
+    # second and so s-olive; ARIMA is not in those charts, and any non-LLM,
+    # non-human series there falls to s-grey.
+    '#094FA7': 'var(--s-blue)',       # Fed nowcasts
+    '#083C7D': 'var(--s-olive)',      # Bloomberg Consensus
+    '#065DC9': 'var(--s-grey)',       # ARIMA
     '#D97757': 'var(--warm)',         # Claude logo -- the paper orange itself
     '#000000': 'var(--fg)',
     '#FFFFFF': 'var(--bg)',
