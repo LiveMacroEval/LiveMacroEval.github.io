@@ -39,7 +39,7 @@
     <div class="btnrow">
       <a class="btn" href="https://arxiv.org/abs/2608.30110">Paper</a>
       <a class="btn" href="https://github.com/LiveMacroEval/LiveMacroEval">GitHub</a>
-      <a class="btn" href="https://fintech.gatech.edu/#/">GT FISL</a>
+      <a class="btn" href="https://fintech.gatech.edu/#/">GT FSIL</a>
     </div>
 
     <div class="livestrip">
@@ -266,10 +266,10 @@
       <table>
         <thead><tr>
           <th style="width:44px">#</th><th>Model</th>
-          <th class="num">LiveMacro</th><th class="num">90% CI</th><th class="num">Events</th>
+          <th class="num">LiveMacro</th><th class="num">90% CI</th>
           <th class="barcell">vs. consensus</th>
         </tr></thead>
-        <tbody id="lb-body"><tr><td colspan="6">Loading…</td></tr></tbody>
+        <tbody id="lb-body"><tr><td colspan="5">Loading…</td></tr></tbody>
       </table>
     </div>
     <p class="note" id="lb-note">—</p>
@@ -286,10 +286,10 @@
       <table>
         <thead><tr>
           <th style="width:44px">#</th><th>Configuration</th>
-          <th class="num">LiveMacro</th><th class="num">Events</th>
+          <th class="num">LiveMacro</th>
           <th class="barcell">vs. consensus</th>
         </tr></thead>
-        <tbody id="ad-body"><tr><td colspan="5">Loading…</td></tr></tbody>
+        <tbody id="ad-body"><tr><td colspan="4">Loading…</td></tr></tbody>
       </table>
     </div>
     <p class="note" id="ad-note">—</p>
@@ -301,10 +301,10 @@
     <h2>Real-time return: LiveBetting Score</h2>
     <p>Across the months since the paper window closed, the institutional nowcasts lead the frontier
       agents on every market that has one. On real GDP the two frontier agents still finish the
-      window ahead of break-even and above the Atlanta Fed; on CPI, the unemployment rate and
-      payrolls they finish in the red, a real limit on indicators where institutional models are
-      tuned to known economic structure. The Qwen curves stop at their last window before the July
-      2026 change to their job.</p>
+      window ahead of break-even and above the Atlanta Fed; on CPI and the unemployment rate they
+      finish in the red, a real limit on indicators where institutional models are tuned to known
+      economic structure. The Qwen arms appear in the month tabs up to the July 2026 change to
+      their job, and not on the cumulative charts.</p>
     <p>The all-months view stitches each window end to end and carries the bankroll across them.
       A month tab (a quarter, for GDP) re-bases at the start of that window, so it shows the return
       on that window's bets alone; single windows swing far more than the cumulative curve does.</p>
@@ -378,6 +378,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903c"></script>
+<script src="assets/js/main.js?v=20260903d"></script>
 </body>
 </html>

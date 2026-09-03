@@ -39,8 +39,8 @@ RESULTS = Path(os.environ.get("LIVEMACRO_RESULTS", "/home/ruiyi/livemacro/Result
 
 sys.path.insert(0, str(TOOLS))
 from update_site import (  # noqa: E402
-    BETTING_ANCHOR, BETTING_CUTOFF, BETTING_DROPPED, BETTING_LABELS, BETTING_MARKETS,
-    _window_of,
+    BETTING_ANCHOR, BETTING_CUMULATIVE_HIDDEN, BETTING_CUTOFF, BETTING_DROPPED,
+    BETTING_LABELS, BETTING_MARKETS, _window_of,
 )
 sys.path.insert(0, str(RESULTS / "polymarket_return"))
 from plot_continuous_0831 import make_segments  # noqa: E402  (segment SPEC only)
@@ -178,11 +178,15 @@ def main() -> int:
             tot_inv = sum(c["inv"] for c in wins.values())
             tot_val = sum(c["val"] for c in wins.values())
             r_cum = (tot_val - tot_inv) / tot_inv * 100.0
-            n_curves += 1
-            check(name in cum and abs(cum[name] - r_cum) <= 0.05 + 1e-9,
-                  f"{label:17s} {name:26s} cumulative {r_cum:+9.1f}%  site {cum.get(name)}")
-            check(abs(table[label].get(name, float('nan')) - r_cum) <= 0.05 + 1e-9,
-                  f"{label:17s} {name:26s} leaderboard table {table[label].get(name)}")
+            if model in BETTING_CUMULATIVE_HIDDEN:
+                check(name not in cum and name not in table[label],
+                      f"{label:17s} {name:26s} kept off the cumulative chart and table")
+            else:
+                n_curves += 1
+                check(name in cum and abs(cum[name] - r_cum) <= 0.05 + 1e-9,
+                      f"{label:17s} {name:26s} cumulative {r_cum:+9.1f}%  site {cum.get(name)}")
+                check(abs(table[label].get(name, float('nan')) - r_cum) <= 0.05 + 1e-9,
+                      f"{label:17s} {name:26s} leaderboard table {table[label].get(name)}")
             for w, c in wins.items():
                 r_w = (c["val"] - c["inv"]) / c["inv"] * 100.0
                 curve = next((s for s in pub_months[w]["series"] if s["name"] == name), None)
@@ -196,8 +200,8 @@ def main() -> int:
                     check(curve["start"] == d0 and len(curve["values"]) == d1 - d0 + 1,
                           f"{label:17s} {name:26s} {w}: spans days {d0}..{d1}")
         # nothing published that the raw files do not support
-        raw_names = {BETTING_LABELS.get(m, m) for m in per}
-        check(set(cum) == raw_names, f"{label}: published arms == arms with kept bets")
+        raw_names = {BETTING_LABELS.get(m, m) for m in per if m not in BETTING_CUMULATIVE_HIDDEN}
+        check(set(cum) == raw_names, f"{label}: published cumulative arms == arms with kept bets")
         for w, mo in pub_months.items():
             pub = {s["name"] for s in mo["series"]}
             raw = {BETTING_LABELS.get(m, m) for m, wins in per.items() if w in wins}

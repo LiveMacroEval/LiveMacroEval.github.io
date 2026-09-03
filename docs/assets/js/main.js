@@ -54,8 +54,8 @@ function cellBar(v, max) {
   return `<span class="cellbar"><i class="${v >= 0 ? 'pos' : 'neg'}" style="${side}"></i></span>`;
 }
 
-/* One row, used by both panels of the leaderboard. Agent-design rows have no
-   CI or event count, so those cells fall back to an em dash. */
+/* One leaderboard row: rank, name, score, interval, bar. No event count
+   (user decision 2026-09-03). The consensus reference has no interval. */
 function leaderRow(r, rank, isRef, isLead, max) {
   const kindLabel = { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || '';
   return `<tr class="${isRef ? 'ref' : isLead ? 'lead' : ''}">
@@ -64,13 +64,12 @@ function leaderRow(r, rank, isRef, isLead, max) {
         ${r.note ? `<span class="rownote">${esc(r.note)}</span>` : ''}</td>
     <td class="num">${scoreCell(r.score)}</td>
     <td class="num ci">${r.ci ? `[${fmt(r.ci[0])}, ${fmt(r.ci[1])}]` : '—'}</td>
-    <td class="num ci">${r.events ?? '—'}</td>
     <td class="barcell">${bar(r.score, max)}</td>
   </tr>`;
 }
 
 function panelHeader(label) {
-  return `<tr class="grouphdr"><td colspan="6">${esc(label)}</td></tr>`;
+  return `<tr class="grouphdr"><td colspan="5">${esc(label)}</td></tr>`;
 }
 
 /* A strip of tab buttons. `views` is [{key, label}]; `pick` receives the key.
@@ -154,7 +153,6 @@ function agentRow(r, rank, isRef, isLead, max) {
     <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${kindLabel}</span>
         ${sub ? `<span class="rownote">${esc(sub)}</span>` : ''}</td>
     <td class="num">${scoreCell(r.score)}</td>
-    <td class="num ci">${r.events ?? '—'}</td>
     <td class="barcell">${bar(r.score, max)}</td>
   </tr>`;
 }
@@ -163,7 +161,7 @@ function renderAgentDesign(a) {
   const body = byId('ad-body');
   if (!body || !a) return;
   const max = Math.max(...a.rows.map(r => Math.abs(r.score))) || 1;
-  const html = [`<tr class="grouphdr"><td colspan="5">${esc(a.window)}</td></tr>`];
+  const html = [`<tr class="grouphdr"><td colspan="4">${esc(a.window)}</td></tr>`];
   let rank = 0;
   for (const r of a.rows) {
     const isRef = r.kind === 'human';
@@ -228,7 +226,7 @@ fetch('data/leaderboard.json?v=' + Date.now())
     const msg = location.protocol === 'file:'
       ? 'This page reads its numbers with fetch(), which a browser blocks on file:// URLs. Serve the folder instead: <code>python3 -m http.server</code> in docs/, then open http://localhost:8000.'
       : `Could not load data/leaderboard.json (${esc(e.message || e)}). A hard reload usually fixes it — the page and the script are cached separately.`;
-    body.innerHTML = `<tr><td colspan="6">${msg}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5">${msg}</td></tr>`;
   });
 
 /* ---------------------------------------------------------------- charts --

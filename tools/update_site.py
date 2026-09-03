@@ -73,8 +73,9 @@ MODEL_LABELS = {
 }
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
-# Figure 2 in the paper drops this arm (n=11 outlier); keep the site consistent.
-DROPPED = {"claude-code-agent"}
+# Figure 2 in the paper drops the plug-in arm (n=11 outlier); keep the site
+# consistent. GPT-5 (reasoned) is off the site (user decision 2026-09-03).
+DROPPED = {"claude-code-agent", "gpt-5-search-api-reasoned"}
 
 # The arms that went live in June 2026 sit in the all-months table like every
 # other arm (user decision 2026-09-03: the 0825 window covers their whole live
@@ -127,9 +128,9 @@ BETTING_MARKETS = [
     ("real_gdp_qoq", "Real GDP"),
     ("unemployment_rate", "Unemployment Rate"),
     ("cpi_yoy", "CPI"),
-    # Added with the 2026-08-31 run; the frozen paper run has no payrolls CSV,
-    # and a market whose CSV is absent is skipped with a printed note.
-    ("nonfarm_payrolls_change", "Nonfarm Payrolls"),
+    # The 2026-08-31 run also produces nonfarm_payrolls_change; it is not
+    # published (user decision 2026-09-03: no institutional nowcast to compare
+    # against). A market whose CSV is absent is skipped with a printed note.
 ]
 # A quarterly market's tab is the whole quarter: the Q1 GDP market is bet
 # across a "feb" and a "mar" segment (the paper's split of one window), and
@@ -176,6 +177,11 @@ BETTING_CUTOFF = {
     "qwen3-235b-a22b-instruct-2507": dt.datetime(2026, 7, 5),
     "qwen3-next-80b-a3b-instruct": dt.datetime(2026, 7, 5),
 }
+# Arms drawn in the month tabs but not on the cumulative "All months" chart
+# (nor in its table): with the cutoff, a Qwen cumulative curve stops months
+# before the others, so its "final" would not be comparable (user decision
+# 2026-09-03). The month tabs are like-for-like windows, so Qwen stays there.
+BETTING_CUMULATIVE_HIDDEN = set(BETTING_CUTOFF)
 
 
 def _is_human(arm: str) -> bool:
@@ -291,13 +297,18 @@ def _window_of(market_key: str, tag: str, first_bet: dt.datetime | None) -> tupl
 
 
 def _curve(arm: str, cell: dict[int, tuple[float, float]]) -> dict:
-    """One published curve from {day -> (x, value)}: null for a day with no
-    bet, so the chart can break the line."""
+    """One published curve from {day -> (x, value)}. A day with no bet carries
+    the previous value forward: a cumulative return does not move without a
+    new bet, so the line stays flat there rather than breaking (the breaks
+    the earlier null-for-no-bet rendering drew were read as data gaps)."""
     days = sorted(cell)
     lo, hi = days[0], days[-1]
-    # "or 0.0" turns a rounded -0.0 into plain 0.0
-    values = [(round(cell[d][1], 1) or 0.0) if d in cell else None
-              for d in range(lo, hi + 1)]
+    values = []
+    last = 0.0
+    for d in range(lo, hi + 1):
+        if d in cell:
+            last = round(cell[d][1], 1) or 0.0   # "or 0.0" turns -0.0 into 0.0
+        values.append(last)
     return {
         "name": BETTING_LABELS.get(arm, arm),
         "kind": "human" if _is_human(arm) else "llm",
@@ -418,7 +429,8 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                 wc = win_cells.setdefault(w, {})
                 if wd not in wc or x > wc[wd][0]:
                     wc[wd] = (x, wret)
-            cumulative.append(_curve(arm, cell))
+            if arm not in BETTING_CUMULATIVE_HIDDEN:
+                cumulative.append(_curve(arm, cell))
             for w, wc in win_cells.items():
                 by_win[w].append(_curve(arm, wc))
 
@@ -504,12 +516,13 @@ def read_case_study(results_root: Path) -> list[dict]:
 
 
 def _score_row(r: dict) -> dict:
+    # no event count: the site publishes the score and its interval only
+    # (user decision 2026-09-03)
     return {
         "name": MODEL_LABELS.get(r["model"], r["model"]),
         "kind": MODEL_KIND.get(r["model"], "llm"),
         "score": round(float(r["BDRC_point"]), 3),
         "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
-        "events": int(r["n_events"]),
         "note": "",
     }
 
@@ -517,7 +530,7 @@ def _score_row(r: dict) -> dict:
 def _consensus_row(label: str) -> dict:
     # The consensus is 0 by construction and is not a row in the CSV.
     return {"name": label, "kind": "human", "score": 0.0,
-            "ci": None, "events": None, "note": "reference, 0 by construction"}
+            "ci": None, "note": "reference, 0 by construction"}
 
 
 def read_scores(csv_path: Path, consensus_label: str,
@@ -570,13 +583,20 @@ def _months_span(months: list[str]) -> str:
     return f"{name(months[0])} {y0}–{name(months[-1])} {y1}"
 
 
-def read_period_scores(period_dir: Path, consensus_label: str) -> list[dict]:
-    """One leaderboard panel per period (quarters on the site), from the
-    by-period sibling of the overlay (score_by_period_<MMDD>.py). Same columns
-    and rounding as the headline; each panel is the same statistic on the
-    releases whose reference month falls in that period. The newest panel is
-    flagged as the quarter in progress when it does not yet hold three months,
-    and any short panel says which months it covers."""
+def read_period_scores(period_dir: Path, consensus_label: str,
+                       overlay_csv: Path) -> tuple[list[dict], list[dict]]:
+    """(period panels, all-period rows) from the by-period sibling of the
+    overlay (score_by_period_<MMDD>.py). Same columns and rounding as the
+    headline; each panel is the same statistic on the releases whose
+    reference month falls in that period. The newest panel is flagged as the
+    quarter in progress when it does not yet hold three months, and any short
+    panel says which months it covers.
+
+    The all-period rows replace the overlay's own headline table on the site:
+    they are identical for every arm except those with outage-frozen
+    nowcasts, whose stale events the by-period run drops (metadata.json says
+    which). That identity is asserted here, so a by-period run from a
+    different overlay cannot be published against this one."""
     meta_path = period_dir / "metadata.json"
     if not meta_path.exists():
         sys.exit(f"by-period metadata not found:\n  {meta_path}\n"
@@ -599,6 +619,33 @@ def read_period_scores(period_dir: Path, consensus_label: str) -> list[dict]:
                 continue
             by_period.setdefault(r["period"], []).append(_score_row(r))
 
+    # the all-period rows, checked against the overlay for every arm the
+    # by-period run did not touch
+    all_csv = period_dir / "final_vs_final_all_ci.csv"
+    if not all_csv.exists():
+        sys.exit(f"by-period all-rows CSV not found:\n  {all_csv}")
+    stale = set(meta.get("stale_events_dropped", {}))
+    overlay = {}
+    with overlay_csv.open() as fh:
+        for r in csv.DictReader(fh):
+            overlay[r["model"]] = r
+    all_rows = []
+    with all_csv.open() as fh:
+        for r in csv.DictReader(fh):
+            m = r["model"]
+            if m not in stale and m in overlay:
+                for k in ("BDRC_point", "n_events"):
+                    if abs(float(r[k]) - float(overlay[m][k])) > 1e-9:
+                        sys.exit(f"{all_csv.name}: {m} {k}={r[k]} but the overlay says "
+                                 f"{overlay[m][k]} -- by-period run and overlay disagree")
+            if m in DROPPED:
+                continue
+            all_rows.append(_score_row(r))
+    all_rows.sort(key=lambda x: -x["score"])
+    if all_rows:
+        all_rows[0]["note"] = "leads the panel"
+    all_rows.insert(0, _consensus_row(consensus_label))
+
     months_of = {p["key"]: p["months"] for p in meta.get("periods", [])}
     keys = sorted(by_period)
     panels = []
@@ -615,7 +662,7 @@ def read_period_scores(period_dir: Path, consensus_label: str) -> list[dict]:
         if newest and (group != "quarter" or len(months) < 3):
             panel["current"] = True
         panels.append(panel)
-    return panels
+    return panels, all_rows
 
 
 def main() -> None:
@@ -676,11 +723,14 @@ def main() -> None:
     data = json.loads(out.read_text())
 
     csv_path = args.results_root / SCORING_SUBPATH / args.overlay / "bloomberg_final_vs_final_ci.csv"
-    data["headline"]["rows"] = read_scores(csv_path, args.consensus_label)
+    data["headline"]["rows"] = read_scores(csv_path, args.consensus_label)   # overridden below
     data["headline"].pop("months", None)   # the pre-quarter key, never published again
     if args.periods_dir:
-        data["headline"]["periods"] = read_period_scores(
-            args.results_root / SCORING_SUBPATH / args.periods_dir, args.consensus_label)
+        panels, all_rows = read_period_scores(
+            args.results_root / SCORING_SUBPATH / args.periods_dir, args.consensus_label,
+            csv_path)
+        data["headline"]["periods"] = panels
+        data["headline"]["rows"] = all_rows
     else:
         data["headline"].pop("periods", None)
     # Record the overlay by name only. The absolute private path stays out of the

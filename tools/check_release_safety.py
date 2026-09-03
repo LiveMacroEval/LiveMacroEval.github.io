@@ -129,7 +129,7 @@ SERIES_CASE_DP = 3
 S = str
 N = (int, float)
 
-ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events": "int_or_null",
+ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events?": "int_or_null",
        "note?": S}
 # Agent-design rows: one configuration each, naming the arm it is, on one
 # coverage-matched event set. No CI of their own.

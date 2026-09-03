@@ -136,7 +136,12 @@ inputs feed them:
   `validate_by_period_<MMDD>.py` re-derives every row with no pipeline
   imports. Pass the directory as `--periods-dir`; omit the flag to publish
   the all-quarters table only. The newest quarter is flagged as in progress
-  and captioned with the months it holds so far.
+  and captioned with the months it holds so far. The by-period run also
+  writes the ALL-period rows the site publishes as its headline: identical
+  to the overlay's for every arm except those with outage-frozen nowcasts
+  (`STALE_EVENTS`: the Claude Code arms, releases of 2026-08-10 to 08-21),
+  whose stale events are dropped so the multi-agent headline is the same 12
+  events as its agent-design row. No event counts are published.
 - **Betting curves.** Derived here from the same continuous-returns CSVs as
   the cumulative curves: each window (a month, or a quarter on the GDP
   market) is re-based at its start, so a tab shows the return on that
@@ -158,8 +163,11 @@ python tools/update_site.py \
 
 Both Qwen arms changed regime on 2026-07-05, so `BETTING_CUTOFF` drops, for
 each of them, the first betting window holding a bet from that date on and
-every later window; earlier windows and the score tables keep them. The
-betting run must therefore include Qwen
+every later window; earlier windows and the score tables keep them. They are
+also kept off the cumulative "All months" chart and its table
+(`BETTING_CUMULATIVE_HIDDEN`), where a curve that stops months early would
+not be comparable. Payrolls is not published (no institutional nowcast).
+The betting run must include Qwen
 (`plot_continuous_0831.py --include-qwen --output-dir
 continuous_returns_20260831_with_qwen`), which also puts Qwen back into the
 February shared start that it binds. The arms that went live in June 2026

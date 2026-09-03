@@ -6,7 +6,7 @@
     "title": "LiveMacro Score \u2014 headline evaluation",
     "window": "Target reference periods Nov 2025 \u2013 Jul 2026 (official releases Dec 1, 2025 \u2013 Aug 18, 2026)",
     "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2.",
-    "period_note": "Each quarter tab scores only the releases whose reference month falls in that quarter, with the same metric and 90% parametric-bootstrap CIs as the all-quarters table; Events is the quarter's count. Advance GDP counts in the last month of its quarter, and a release that carries fields from two periods counts whole in the period most of its fields belong to. The newest tab is the quarter in progress. An arm is listed only for quarters it was live.",
+    "period_note": "Each quarter tab scores only the releases whose reference month falls in that quarter, with the same metric and 90% parametric-bootstrap CIs as the all-quarters table. Advance GDP counts in the last month of its quarter, and a release that carries fields from two periods counts whole in the period most of its fields belong to. A release an arm reached only with a nowcast frozen by an outage is dropped for that arm. The newest tab is the quarter in progress.",
     "source": "market_surprise_capture_score/step_15_4_live_scoring/investing_overlay_0825/ (not redistributed)",
     "rows": [
       {
@@ -14,29 +14,26 @@
         "kind": "human",
         "score": 0.0,
         "ci": null,
-        "events": null,
         "note": "reference, 0 by construction"
+      },
+      {
+        "name": "Claude Code multi-agent",
+        "kind": "llm",
+        "score": 0.02,
+        "ci": [
+          0.004,
+          0.035
+        ],
+        "note": "leads the panel"
       },
       {
         "name": "GPT-5",
         "kind": "llm",
         "score": -0.015,
         "ci": [
-          -0.042,
+          -0.041,
           0.0
         ],
-        "events": 90,
-        "note": "leads the panel"
-      },
-      {
-        "name": "Claude Code multi-agent",
-        "kind": "llm",
-        "score": -0.02,
-        "ci": [
-          -0.04,
-          -0.003
-        ],
-        "events": 18,
         "note": ""
       },
       {
@@ -47,7 +44,6 @@
           -0.065,
           -0.035
         ],
-        "events": 82,
         "note": ""
       },
       {
@@ -55,21 +51,9 @@
         "kind": "llm",
         "score": -0.121,
         "ci": [
-          -0.197,
-          -0.059
+          -0.199,
+          -0.06
         ],
-        "events": 61,
-        "note": ""
-      },
-      {
-        "name": "GPT-5 (reasoned)",
-        "kind": "llm",
-        "score": -0.13,
-        "ci": [
-          -0.216,
-          -0.076
-        ],
-        "events": 18,
         "note": ""
       },
       {
@@ -77,10 +61,9 @@
         "kind": "llm",
         "score": -0.186,
         "ci": [
-          -0.276,
-          -0.112
+          -0.275,
+          -0.111
         ],
-        "events": 61,
         "note": ""
       },
       {
@@ -91,7 +74,6 @@
           -0.246,
           -0.142
         ],
-        "events": 92,
         "note": ""
       }
     ],
@@ -105,7 +87,6 @@
             "kind": "human",
             "score": 0.0,
             "ci": null,
-            "events": null,
             "note": "reference, 0 by construction"
           },
           {
@@ -116,7 +97,6 @@
               -0.056,
               0.008
             ],
-            "events": 17,
             "note": "leads the quarter"
           },
           {
@@ -127,7 +107,6 @@
               -0.087,
               -0.045
             ],
-            "events": 19,
             "note": ""
           },
           {
@@ -138,7 +117,6 @@
               -0.193,
               -0.099
             ],
-            "events": 10,
             "note": ""
           }
         ],
@@ -153,7 +131,6 @@
             "kind": "human",
             "score": 0.0,
             "ci": null,
-            "events": null,
             "note": "reference, 0 by construction"
           },
           {
@@ -164,7 +141,6 @@
               -0.022,
               0.026
             ],
-            "events": 30,
             "note": "leads the quarter"
           },
           {
@@ -175,7 +151,6 @@
               -0.01,
               0.001
             ],
-            "events": 29,
             "note": ""
           },
           {
@@ -186,7 +161,6 @@
               -0.047,
               -0.009
             ],
-            "events": 24,
             "note": ""
           },
           {
@@ -197,7 +171,6 @@
               -0.165,
               -0.066
             ],
-            "events": 24,
             "note": ""
           },
           {
@@ -208,7 +181,6 @@
               -0.188,
               -0.093
             ],
-            "events": 30,
             "note": ""
           }
         ]
@@ -222,7 +194,6 @@
             "kind": "human",
             "score": 0.0,
             "ci": null,
-            "events": null,
             "note": "reference, 0 by construction"
           },
           {
@@ -233,7 +204,6 @@
               0.006,
               0.05
             ],
-            "events": 9,
             "note": "leads the quarter"
           },
           {
@@ -244,7 +214,6 @@
               -0.028,
               0.007
             ],
-            "events": 34,
             "note": ""
           },
           {
@@ -255,18 +224,6 @@
               -0.082,
               -0.026
             ],
-            "events": 34,
-            "note": ""
-          },
-          {
-            "name": "GPT-5 (reasoned)",
-            "kind": "llm",
-            "score": -0.174,
-            "ci": [
-              -0.287,
-              -0.095
-            ],
-            "events": 9,
             "note": ""
           },
           {
@@ -277,7 +234,6 @@
               -0.373,
               -0.136
             ],
-            "events": 28,
             "note": ""
           },
           {
@@ -288,7 +244,6 @@
               -0.449,
               -0.13
             ],
-            "events": 28,
             "note": ""
           },
           {
@@ -299,7 +254,6 @@
               -0.394,
               -0.256
             ],
-            "events": 34,
             "note": ""
           }
         ]
@@ -313,8 +267,17 @@
             "kind": "human",
             "score": 0.0,
             "ci": null,
-            "events": null,
             "note": "reference, 0 by construction"
+          },
+          {
+            "name": "Claude Code multi-agent",
+            "kind": "llm",
+            "score": -0.002,
+            "ci": [
+              -0.003,
+              -0.001
+            ],
+            "note": "leads the quarter"
           },
           {
             "name": "auto-ARIMA",
@@ -324,8 +287,7 @@
               -0.056,
               0.002
             ],
-            "events": 9,
-            "note": "leads the quarter"
+            "note": ""
           },
           {
             "name": "GPT-5",
@@ -335,29 +297,6 @@
               -0.064,
               -0.011
             ],
-            "events": 9,
-            "note": ""
-          },
-          {
-            "name": "GPT-5 (reasoned)",
-            "kind": "llm",
-            "score": -0.044,
-            "ci": [
-              -0.08,
-              -0.017
-            ],
-            "events": 9,
-            "note": ""
-          },
-          {
-            "name": "Claude Code multi-agent",
-            "kind": "llm",
-            "score": -0.095,
-            "ci": [
-              -0.123,
-              -0.07
-            ],
-            "events": 9,
             "note": ""
           },
           {
@@ -368,7 +307,6 @@
               -0.159,
               -0.057
             ],
-            "events": 9,
             "note": ""
           },
           {
@@ -379,7 +317,6 @@
               -0.538,
               -0.379
             ],
-            "events": 9,
             "note": ""
           },
           {
@@ -390,7 +327,6 @@
               -0.637,
               -0.365
             ],
-            "events": 9,
             "note": ""
           }
         ],
@@ -461,16 +397,6 @@
         ]
       },
       {
-        "name": "GPT-5 (reasoned)",
-        "kind": "llm",
-        "scores": [
-          -0.197,
-          -0.162,
-          -0.001,
-          0.022
-        ]
-      },
-      {
         "name": "Qwen3-80B",
         "kind": "llm",
         "scores": [
@@ -485,21 +411,11 @@
   "betting": {
     "title": "LiveBetting Score",
     "window": "Target windows Feb \u2013 Jul 2026; Q1 and Q2 2026 for real GDP.",
-    "note": "Cumulative return on a stream of hourly $1 bets, ending at the official release. Institutional nowcasts are drawn where one exists; payrolls has none. Both Qwen arms changed regime on July 5, 2026 (an upstream change to their job), so a Qwen window holding any bet from that date on is not shown, nor any later window, and their cumulative curves end with the last clean window. Earlier windows are kept.",
+    "note": "Cumulative return on a stream of hourly $1 bets, ending at the official release. Every market shown has an institutional nowcast to compare against. Both Qwen arms changed regime on July 5, 2026 (an upstream change to their job): a Qwen window holding any bet from that date on is not shown, nor any later window, and the Qwen arms are kept off the cumulative chart, where a curve that stops early would not be comparable. Their earlier windows are in the month tabs.",
     "markets": [
       {
         "label": "Real GDP",
         "rows": [
-          {
-            "name": "Qwen3-80B",
-            "kind": "llm",
-            "ret": 483.7
-          },
-          {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": 379.5
-          },
           {
             "name": "NY Fed Staff Nowcast",
             "kind": "human",
@@ -546,11 +462,6 @@
             "ret": 60.8
           },
           {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": 22.2
-          },
-          {
             "name": "Claude Code agent",
             "kind": "llm",
             "ret": 0.0
@@ -564,11 +475,6 @@
             "name": "Claude-4.5-Sonnet",
             "kind": "llm",
             "ret": -61.2
-          },
-          {
-            "name": "Qwen3-80B",
-            "kind": "llm",
-            "ret": -74.4
           },
           {
             "name": "Claude Code multi-agent",
@@ -591,16 +497,6 @@
             "ret": -40.9
           },
           {
-            "name": "Qwen3-80B",
-            "kind": "llm",
-            "ret": -43.1
-          },
-          {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": -48.3
-          },
-          {
             "name": "Claude Code agent",
             "kind": "llm",
             "ret": -59.5
@@ -616,48 +512,13 @@
             "ret": -69.8
           }
         ]
-      },
-      {
-        "label": "Nonfarm Payrolls",
-        "rows": [
-          {
-            "name": "Claude Code agent",
-            "kind": "llm",
-            "ret": -15.9
-          },
-          {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": -60.7
-          },
-          {
-            "name": "Qwen3-80B",
-            "kind": "llm",
-            "ret": -77.4
-          },
-          {
-            "name": "GPT-5",
-            "kind": "llm",
-            "ret": -78.6
-          },
-          {
-            "name": "Claude-4.5-Sonnet",
-            "kind": "llm",
-            "ret": -79.0
-          },
-          {
-            "name": "Claude Code multi-agent",
-            "kind": "llm",
-            "ret": -100.0
-          }
-        ]
       }
     ]
   },
   "agent_design": {
     "title": "Tool and agent design",
-    "window": "Coverage-matched: the June and July 2026 releases all three configurations covered, after dropping the Aug 10 - 21, 2026 outage.",
-    "note": "Same base model (Claude-4.5-Sonnet) and live protocol. The three configurations share one event set, so they are comparable with each other; they are not comparable with the leaderboard, which scores each arm on every release it covered.",
+    "window": "Coverage-matched releases, Jul 9 \u2013 Aug 7, 2026.",
+    "note": "Same base model (Claude-4.5-Sonnet) and live protocol, scored on one shared set of releases, so the three configurations are comparable with each other.",
     "rows": [
       {
         "name": "consensus baseline",
@@ -670,22 +531,19 @@
         "score": 0.02,
         "best": true,
         "kind": "llm",
-        "model": "Claude Code multi-agent",
-        "events": 12
+        "model": "Claude Code multi-agent"
       },
       {
         "name": "+ financial plug-in",
         "score": -0.055,
         "kind": "llm",
-        "model": "Claude Code agent",
-        "events": 12
+        "model": "Claude Code agent"
       },
       {
         "name": "plain prompt (control)",
         "score": -0.08,
         "kind": "llm",
-        "model": "Claude-4.5-Sonnet",
-        "events": 12
+        "model": "Claude-4.5-Sonnet"
       }
     ]
   },
