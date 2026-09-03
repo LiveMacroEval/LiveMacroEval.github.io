@@ -12,7 +12,8 @@ separate private repo — see "The rule this enforces" below.
 ```
 docs/                        THE PUBLISHED SITE — 16 files, nothing else
 ├── index.html               structure and prose. Contains NO numbers.
-├── data/leaderboard.json    every number the site shows  ← the only data file
+├── data/leaderboard.json    every number in the tables, incl. the month tabs
+├── data/series.json         the line charts: cumulative + per-month curves
 ├── assets/css/style.css
 ├── assets/js/main.js        fetches the JSON, renders the tables
 ├── assets/figures/*.png     the 10 aggregate figures from the paper
@@ -22,7 +23,7 @@ docs/                        THE PUBLISHED SITE — 16 files, nothing else
 tools/                       NOT published
 ├── update_site.py           regenerates the JSON from the private pipeline
 ├── check_release_safety.py  the gate: what docs/ may contain
-├── test_release_safety.py   21 adversarial cases against that gate
+├── test_release_safety.py   36 adversarial cases against that gate
 ├── hooks/pre-commit         local enforcement
 ├── README.md                this file
 └── DEPLOY.md                enabling Pages, custom domains
@@ -112,14 +113,45 @@ Serve it — don't open `index.html` via `file://`, or the browser blocks the
 ### Which overlay
 
 The default is `bloomberg_overlay`, the **frozen paper window** (Nov 2025 – Mar
-2026). The Bloomberg-based score is frozen at the 2026-05-05 cutoff; later months
-use the Investing.com consensus proxy and are comparable only to each other. Pass
-a caption saying so:
+2026). The Bloomberg-based score is frozen at the 2026-05-05 cutoff; the live
+board scores every month against the Investing.com calendar consensus
+(`investing_overlay_<MMDD>`), which tracks Bloomberg at 0.997 correlation in
+surprise units. The reference row must be relabelled for it, and the script
+refuses to run an investing overlay under the Bloomberg label.
+
+### The month tabs (added 2026-09-03)
+
+The leaderboard and the LiveBetting charts each carry an "All months" view plus
+one tab per target month. Two inputs feed them:
+
+- **Scores.** `score_by_month_<MMDD>.py` in the private
+  `step_15_4_live_scoring/` writes `investing_overlay_<MMDD>_by_month/`, the
+  headline statistic and its bootstrap CI restricted to each month's releases
+  (advance GDP counts in the last month of its quarter). Pass it as
+  `--months-dir`; omit the flag to publish the all-months table only.
+- **Betting curves.** Derived here from the same continuous-returns CSVs as
+  the cumulative curves: each month is re-based at its segment start, so a tab
+  shows the return on that month's bets alone. Nothing extra to run.
+
+The full 2026-08-25 refresh command:
 
 ```bash
-python tools/update_site.py --overlay investing_overlay_0906 \
-  --window "Investing.com consensus proxy · target periods Apr – Aug 2026"
+python tools/update_site.py \
+  --overlay investing_overlay_0825 --months-dir investing_overlay_0825_by_month \
+  --consensus-label "Investing.com consensus" \
+  --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
+  --betting-dir continuous_returns_20260831 \
+  --window "Target reference periods Nov 2025 – Jul 2026 (official releases Dec 1, 2025 – Aug 18, 2026)" \
+  --betting-window "Target windows Feb – Jul 2026; Q2 2026 for real GDP." \
+  --last-updated 2026-08-25 --skip-figures
 ```
+
+Two arms are treated specially, both on purpose: the two June-2026 arms
+(`LATE_ARMS`) appear in the month tabs and the agent-design panel but not in
+the all-months table, because the pipeline scores each arm on its own event
+set and a two-month score cannot sit beside a nine-month one; and both Qwen
+arms (`BETTING_DROPPED`) are off the betting charts after their July 2026
+regime break, while staying in every score table.
 
 ### Adding a model arm
 

@@ -23,7 +23,7 @@ top of that:
 Run it: python tools/check_release_safety.py
 It also runs automatically from update_site.py, from the git pre-commit hook
 (tools/hooks/pre-commit), and in CI on every push (.github/workflows/).
-tools/test_release_safety.py exercises it against 21 planted leaks.
+tools/test_release_safety.py exercises it against 36 planted leaks.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ ALLOWED_FILES |= set(PIPELINE_ICON_FILES)
 
 # Per-file byte ceilings. Generous, but a data dump blows past them.
 MAX_BYTES = {
-    ".json": 32 * 1024,
+    ".json": 64 * 1024,   # series.json carries the month tabs; each JSON also has its own cap below
     ".html": 128 * 1024,
     ".css": 64 * 1024,
     ".js": 64 * 1024,
@@ -87,7 +87,11 @@ IMAGE_MAGIC = {
 # --------------------------------------------------------------------------
 MAX_JSON_BYTES = 32 * 1024
 MAX_ARRAY_LEN = 30        # a per-release or hourly series is far longer
-MAX_NUMERIC_LITERALS = 150  # the real file holds ~25
+# One row per model per PANEL. The month tabs (2026-09-03) add a panel per
+# target month -- nine so far, each <= 8 rows of score + CI pair + count -- so
+# the real file holds ~330 numbers. Still one row per model, never one per
+# release: a release-level dump would need thousands.
+MAX_NUMERIC_LITERALS = 500
 
 # --------------------------------------------------------------------------
 # 2b. series.json -- the line charts, drawn on the page instead of shipped as
@@ -106,13 +110,18 @@ MAX_NUMERIC_LITERALS = 150  # the real file holds ~25
 #     edit cannot quietly add them.
 #   * both are already public as PNGs in the paper. This changes precision,
 #     not kind.
-# The caps are sized just above the real payload (~5.5 KB, ~830 points), so a
-# full hourly dump (>1,400 points per market) still cannot fit.
-SERIES_MAX_BYTES = 24 * 1024
+# The caps are sized just above the real payload, so a full hourly dump
+# (>1,400 points per market) still cannot fit. Raised 2026-09-03 for the month
+# tabs: four markets across six target months, each published twice -- the
+# cumulative curve and the month-by-month re-based curve -- is ~3,300 daily
+# points in ~27 KB. The per-curve length cap and the one-day step floor are
+# what keep an hourly series out; the totals just have to hold the real set.
+SERIES_MAX_BYTES = 40 * 1024
 SERIES_MAX_LEN = 200          # longest single curve; hourly would be 1,400+
-SERIES_MAX_NUMERIC = 1200     # the real file holds ~830
+SERIES_MAX_NUMERIC = 4500     # the real file holds ~3,300
 SERIES_MAX_MARKETS = 8
-SERIES_MAX_CURVES = 12        # per market
+SERIES_MAX_CURVES = 12        # per market, and per month within a market
+SERIES_MAX_MONTHS = 12        # per market
 SERIES_BETTING_DP = 1         # betting values rounded to 0.1pp
 SERIES_CASE_DP = 3
 
@@ -131,12 +140,15 @@ THEME_ROW = {"name": S, "kind": S, "scores": [N]}
 # behind it (>1,400 points per window) stays in the private checkout; only its
 # last value is published.
 BET_ROW = {"name": S, "kind": S, "ret": N, "note?": S}
+# A month tab: the headline table restricted to one target month's releases.
+# Same row shape, so nothing finer than a per-model aggregate can appear.
+MONTH_PANEL = {"key": S, "label": S, "rows": [ROW]}
 SCHEMA = {
     "_comment?": S,
     "last_updated": "date",
     "next_update": "date",
-    "headline": {"title": S, "window": S, "note": S, "source": S,
-                 "rows": [ROW]},
+    "headline": {"title": S, "window": S, "note": S, "month_note?": S, "source": S,
+                 "rows": [ROW], "months?": [MONTH_PANEL]},
     "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW]},
     "themes": {"title": S, "window": S, "note": S,
                "columns": [S], "rows": [THEME_ROW]},
@@ -337,33 +349,22 @@ def check_series() -> None:
 
     n_pts = 0
 
-    bet = d.get("betting", {})
-    markets = bet.get("markets", [])
-    if len(markets) > SERIES_MAX_MARKETS:
-        fail(f"data/series.json: {len(markets)} betting markets exceeds "
-             f"{SERIES_MAX_MARKETS}")
-    for m in markets:
-        extra = set(m) - {"key", "label", "step_days", "series"}
-        if extra:
-            fail(f"data/series.json betting market {m.get('key')!r}: "
-                 f"unexpected key(s) {sorted(extra)}")
-        if m.get("step_days", 0) < 1:
-            fail(f"data/series.json betting market {m.get('key')!r}: step_days "
-                 f"must be >= 1 day -- a finer grid is an hourly dump")
-        curves = m.get("series", [])
+    def check_curves(curves: list, where: str) -> int:
+        """Betting curves under one market or one month tab. Returns points."""
+        pts = 0
         if len(curves) > SERIES_MAX_CURVES:
-            fail(f"data/series.json market {m.get('key')!r}: {len(curves)} "
-                 f"curves exceeds {SERIES_MAX_CURVES}")
+            fail(f"data/series.json {where}: {len(curves)} curves exceeds "
+                 f"{SERIES_MAX_CURVES}")
         for c in curves:
             extra = set(c) - {"name", "kind", "start", "values"}
             if extra:
-                fail(f"data/series.json curve {c.get('name')!r}: unexpected "
-                     f"key(s) {sorted(extra)}")
+                fail(f"data/series.json curve {c.get('name')!r} ({where}): "
+                     f"unexpected key(s) {sorted(extra)}")
             vals = c.get("values", [])
             if len(vals) > SERIES_MAX_LEN:
-                fail(f"data/series.json curve {c.get('name')!r}: {len(vals)} "
-                     f"points exceeds the {SERIES_MAX_LEN} cap")
-            n_pts += len(vals)
+                fail(f"data/series.json curve {c.get('name')!r} ({where}): "
+                     f"{len(vals)} points exceeds the {SERIES_MAX_LEN} cap")
+            pts += len(vals)
             for v in vals:
                 if v is None:
                     continue
@@ -374,6 +375,36 @@ def check_series() -> None:
                     fail(f"data/series.json curve {c.get('name')!r}: {v} carries "
                          f"more than {SERIES_BETTING_DP} dp -- betting curves "
                          f"must be published rounded")
+        return pts
+
+    bet = d.get("betting", {})
+    markets = bet.get("markets", [])
+    if len(markets) > SERIES_MAX_MARKETS:
+        fail(f"data/series.json: {len(markets)} betting markets exceeds "
+             f"{SERIES_MAX_MARKETS}")
+    for m in markets:
+        extra = set(m) - {"key", "label", "step_days", "series", "months"}
+        if extra:
+            fail(f"data/series.json betting market {m.get('key')!r}: "
+                 f"unexpected key(s) {sorted(extra)}")
+        if m.get("step_days", 0) < 1:
+            fail(f"data/series.json betting market {m.get('key')!r}: step_days "
+                 f"must be >= 1 day -- a finer grid is an hourly dump")
+        n_pts += check_curves(m.get("series", []), f"market {m.get('key')!r}")
+        # The month tabs: the same bets re-based per target month. Same curve
+        # shape and the same daily grid, so the same checks apply; a market
+        # may not carry more tabs than there are months in a year.
+        months = m.get("months", [])
+        if len(months) > SERIES_MAX_MONTHS:
+            fail(f"data/series.json market {m.get('key')!r}: {len(months)} "
+                 f"months exceeds {SERIES_MAX_MONTHS}")
+        for mo in months:
+            extra = set(mo) - {"key", "label", "series"}
+            if extra:
+                fail(f"data/series.json market {m.get('key')!r} month "
+                     f"{mo.get('key')!r}: unexpected key(s) {sorted(extra)}")
+            n_pts += check_curves(mo.get("series", []),
+                                  f"market {m.get('key')!r} month {mo.get('key')!r}")
 
     cs = d.get("case_study", {})
     panels = cs.get("panels", [])
@@ -408,9 +439,10 @@ def check_series() -> None:
              f"{SERIES_MAX_NUMERIC} cap -- the charts publish a downsampled "
              "curve, not the hourly series")
 
-    notes.append(f"series.json: {len(markets)} betting markets, {len(panels)} "
-                 f"case-study panels, {n_pts} plotted points, {len(raw):,} bytes "
-                 "-- all within caps")
+    n_months = sum(len(m.get("months", [])) for m in markets)
+    notes.append(f"series.json: {len(markets)} betting markets ({n_months} month "
+                 f"tabs), {len(panels)} case-study panels, {n_pts} plotted points, "
+                 f"{len(raw):,} bytes -- all within caps")
 
 
 def check_leaderboard() -> None:
@@ -439,8 +471,9 @@ def check_leaderboard() -> None:
         fail(f"data/leaderboard.json 'source' leaks a filesystem path: {src!r}")
 
     rows = d.get("headline", {}).get("rows", [])
-    notes.append(f"leaderboard.json: {len(rows)} model rows, {n} numeric literals, "
-                 f"{len(raw):,} bytes -- all within caps")
+    n_months = len(d.get("headline", {}).get("months", []))
+    notes.append(f"leaderboard.json: {len(rows)} model rows, {n_months} month tabs, "
+                 f"{n} numeric literals, {len(raw):,} bytes -- all within caps")
 
 
 # --------------------------------------------------------------------------

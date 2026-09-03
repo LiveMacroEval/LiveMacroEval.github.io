@@ -25,8 +25,18 @@ Usage
 -----
     . /home/ruiyi/anaconda3/bin/activate && conda activate livemacro
     python tools/update_site.py --dry-run
-    python tools/update_site.py --overlay investing_overlay_0906 \
-        --window "Investing.com consensus proxy - target periods Apr-Aug 2026"
+    python tools/update_site.py \
+        --overlay investing_overlay_0825 --months-dir investing_overlay_0825_by_month \
+        --consensus-label "Investing.com consensus" \
+        --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
+        --betting-dir continuous_returns_20260831 \
+        --window "Target reference periods Nov 2025 - Jul 2026" \
+        --last-updated 2026-08-25
+
+The month tabs on the site read `--months-dir`, the by-month sibling of the
+overlay written by score_by_month_<MMDD>.py in the private checkout, and the
+`months` blocks in series.json, derived here from the same continuous-returns
+CSVs as the cumulative curves.
 """
 from __future__ import annotations
 
@@ -66,6 +76,14 @@ MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
 # Figure 2 in the paper drops this arm (n=11 outlier); keep the site consistent.
 DROPPED = {"claude-code-agent"}
+
+# Arms that went live in June 2026 have two months of events, and the pipeline
+# scores every arm on its OWN event set, so their all-months score is not
+# comparable with a nine-month arm's (the private UPDATE_PIPELINE.md, step 4c:
+# never quote them side by side). They are left out of the cumulative table --
+# the coverage-matched agent-design panel is where they are compared -- and
+# appear in the month tabs, where every arm scores the same month's releases.
+LATE_ARMS = {"claude-code-multiagent", "gpt-5-search-api-reasoned"}
 
 # Only these columns are ever read out of the overlay. Aggregates only.
 COLS = ("model", "n_events", "BDRC_point", "BDRC_ci90_lo", "BDRC_ci90_hi")
@@ -113,7 +131,17 @@ BETTING_MARKETS = [
     ("real_gdp_qoq", "Real GDP"),
     ("unemployment_rate", "Unemployment Rate"),
     ("cpi_yoy", "CPI"),
+    # Added with the 2026-08-31 run; the frozen paper run has no payrolls CSV,
+    # and a market whose CSV is absent is skipped with a printed note.
+    ("nonfarm_payrolls_change", "Nonfarm Payrolls"),
 ]
+
+# Segment tags written by the continuous-returns scripts: three-letter target
+# months, plus "q2" for the second-quarter GDP market.
+MONTH_ABBR = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+              "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 # The betting CSVs use their own arm names, distinct from the scoring ones.
 BETTING_LABELS = {
@@ -121,6 +149,8 @@ BETTING_LABELS = {
     "claude-sonnet-4.5": "Claude-4.5-Sonnet",
     "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
+    "claude-code-agent": "Claude Code agent",
+    "claude-code-multiagent": "Claude Code multi-agent",
     "bloomberg-consensus": "Bloomberg ECOS consensus",
     "fed-atlanta": "Atlanta Fed GDPNow",
     "fed-newyork": "NY Fed Staff Nowcast",
@@ -128,7 +158,13 @@ BETTING_LABELS = {
     "fed-forecast": "Cleveland Fed Nowcast",
     "fed-nowcast": "Chicago Fed CHURN",
 }
-BETTING_DROPPED = {"claude-code-agent"}
+# Both Qwen arms are off the LiveBetting charts (project decision 2026-08-31):
+# a synchronised regime break in their job on 2026-07-05 left them in the
+# open-ended June CPI bucket, and the +2771% that produced says nothing about
+# nowcasting. They stay in every score table. The 0831 continuous-returns run
+# already omits them; this is belt and braces for a later run that does not.
+# Both Claude Code arms ARE drawn (the 0831 run includes them on purpose).
+BETTING_DROPPED = {"qwen3-235b-a22b-instruct-2507", "qwen3-next-80b-a3b-instruct"}
 
 
 def _is_human(arm: str) -> bool:
@@ -172,8 +208,9 @@ def read_betting(betting_dir: Path) -> list[dict]:
     for key, label in BETTING_MARKETS:
         path = betting_dir / f"continuous_returns_{key}_{BETTING_ANCHOR}.csv"
         if not path.exists():
-            sys.exit(f"betting CSV not found:\n  {path}\n"
-                     "Pass --betting-dir at the continuous-returns output directory.")
+            print(f"  ! no continuous-returns CSV for {key} in {betting_dir.name}; "
+                  "market skipped")
+            continue
         # Keep only the last point of each arm's stitched series.
         last: dict[str, tuple] = {}
         with path.open() as fh:
@@ -187,7 +224,7 @@ def read_betting(betting_dir: Path) -> list[dict]:
         rows = [{
             "name": BETTING_LABELS.get(arm, arm),
             "kind": "human" if _is_human(arm) else "llm",
-            "ret": round(val, 1),
+            "ret": round(val, 1) or 0.0,   # a rounded -0.0 reads as plain 0.0
         } for arm, (_x, val) in last.items()]
         rows.sort(key=lambda r: -r["ret"])
         markets.append({"label": label, "rows": rows})
@@ -235,47 +272,129 @@ def _parse_ts(text: str):
     return None
 
 
+def _segment_label(tag: str, first_bet: dt.datetime | None) -> tuple[str, str]:
+    """('2026-02', 'Feb 2026') for a monthly tag; ('2026-Q2', 'Q2 2026') for 'q2'.
+
+    The year is the bet year, or the one before when the target month is later
+    in the calendar than the bet month (a December window bet in January)."""
+    t = tag.lower()
+    year = first_bet.year if first_bet else 0
+    if t.startswith("q") and t[1:].isdigit():
+        return f"{year}-Q{t[1:]}", f"Q{t[1:]} {year}"
+    mnum = MONTH_ABBR.get(t)
+    if mnum is None or not first_bet:
+        return tag, tag
+    if mnum > first_bet.month:
+        year -= 1
+    return f"{year}-{mnum:02d}", f"{MONTH_NAMES[mnum - 1]} {year}"
+
+
+def _curve(arm: str, cell: dict[int, tuple[float, float]]) -> dict:
+    """One published curve from {day -> (x, value)}: null for a day with no
+    bet, so the chart can break the line."""
+    days = sorted(cell)
+    lo, hi = days[0], days[-1]
+    # "or 0.0" turns a rounded -0.0 into plain 0.0
+    values = [(round(cell[d][1], 1) or 0.0) if d in cell else None
+              for d in range(lo, hi + 1)]
+    return {
+        "name": BETTING_LABELS.get(arm, arm),
+        "kind": "human" if _is_human(arm) else "llm",
+        "start": lo,
+        "values": values,
+    }
+
+
+def _final(curve: dict) -> float:
+    return next((v for v in reversed(curve["values"]) if v is not None), 0.0)
+
+
 def read_betting_series(betting_dir: Path) -> list[dict]:
-    """Cumulative-return curves, one point per day of stitched time.
+    """Cumulative-return curves, one point per day of stitched time, plus the
+    same bets re-based month by month for the month tabs.
 
     `stitched_x_days` is the x-axis the paper figure plots, so downsampling on
     it keeps the shape identical while cutting ~1,400 hourly points per market
     to a few dozen. Arms join the chart at their own first bet, so each series
     carries its own `start` offset rather than a shared x grid.
+
+    A month view re-bases each arm at the start of that month's segment:
+    return = (profit - profit at segment start) / (dollars bet since), so the
+    tab shows the return on THAT month's bets alone. Day 0 of a month is the
+    segment's shared start -- the anchor arm's first bet, the same instant for
+    every arm -- and an arm that joins later starts at its own first day.
     """
     markets = []
     for key, label in BETTING_MARKETS:
         path = betting_dir / f"continuous_returns_{key}_{BETTING_ANCHOR}.csv"
         if not path.exists():
-            sys.exit(f"betting CSV not found:\n  {path}")
-        by_arm: dict[str, dict[int, tuple[float, float]]] = {}
+            print(f"  ! no continuous-returns CSV for {key} in {betting_dir.name}; "
+                  "market skipped")
+            continue
+        rows_by_arm: dict[str, list[tuple]] = {}
         for r in csv.DictReader(path.open()):
             arm = r["model"]
             if arm in BETTING_DROPPED:
                 continue
-            x = float(r["stitched_x_days"])
-            day = int(x // SERIES_BETTING_STEP_DAYS)
-            cell = by_arm.setdefault(arm, {})
-            # last observation within the day wins
-            if day not in cell or x > cell[day][0]:
-                cell[day] = (x, float(r["cumulative_return_pct"]))
-        series = []
-        for arm, cell in by_arm.items():
-            days = sorted(cell)
-            lo, hi = days[0], days[-1]
-            # null for a day with no bet, so the chart can break the line
-            values = [round(cell[d][1], 1) if d in cell else None
-                      for d in range(lo, hi + 1)]
-            series.append({
-                "name": BETTING_LABELS.get(arm, arm),
-                "kind": "human" if _is_human(arm) else "llm",
-                "start": lo,
-                "values": values,
-            })
-        series.sort(key=lambda s: -(next((v for v in reversed(s["values"])
-                                          if v is not None), 0.0)))
+            rows_by_arm.setdefault(arm, []).append((
+                float(r["stitched_x_days"]), r["segment"],
+                float(r["cumulative_profit"]), float(r["cumulative_invested"]),
+                float(r["cumulative_return_pct"]), _parse_ts(r["datetime_utc"]),
+            ))
+        # day 0 of a segment is the earliest stitched x any arm reaches in it
+        seg_lo: dict[str, float] = {}
+        seg_first: dict[str, dt.datetime | None] = {}
+        for rows in rows_by_arm.values():
+            for x, seg, _p, _i, _ret, ts in rows:
+                if seg not in seg_lo or x < seg_lo[seg]:
+                    seg_lo[seg] = x
+                    seg_first[seg] = ts
+        seg_order = sorted(seg_lo, key=seg_lo.get)
+
+        cumulative: list[dict] = []
+        by_month: dict[str, list[dict]] = {seg: [] for seg in seg_order}
+        for arm, rows in rows_by_arm.items():
+            rows.sort(key=lambda t: t[0])
+            cell: dict[int, tuple[float, float]] = {}
+            seg_cells: dict[str, dict[int, tuple[float, float]]] = {}
+            cur = None
+            p0 = i0 = last_p = last_i = 0.0
+            for x, seg, profit, invested, ret, _ts in rows:
+                day = int(x // SERIES_BETTING_STEP_DAYS)
+                # last observation within the day wins
+                if day not in cell or x > cell[day][0]:
+                    cell[day] = (x, ret)
+                if seg != cur:
+                    # a new month: re-base on the running totals at its start.
+                    # The stitched series is continuous across segments (each
+                    # segment's first row is the previous last row plus one
+                    # bet), so the previous row IS the segment-start total.
+                    p0, i0, cur = last_p, last_i, seg
+                last_p, last_i = profit, invested
+                bet = invested - i0
+                if bet <= 0:
+                    continue
+                seg_ret = (profit - p0) / bet * 100.0
+                sday = int((x - seg_lo[seg]) // SERIES_BETTING_STEP_DAYS)
+                sc = seg_cells.setdefault(seg, {})
+                if sday not in sc or x > sc[sday][0]:
+                    sc[sday] = (x, seg_ret)
+            cumulative.append(_curve(arm, cell))
+            for seg, sc in seg_cells.items():
+                by_month[seg].append(_curve(arm, sc))
+
+        cumulative.sort(key=lambda c: -_final(c))
+        months = []
+        for seg in seg_order:
+            curves = by_month[seg]
+            if not curves:
+                continue
+            curves.sort(key=lambda c: -_final(c))
+            mkey, mlabel = _segment_label(seg, seg_first[seg])
+            months.append({"key": mkey, "label": mlabel, "series": curves})
         markets.append({"key": key, "label": label,
-                        "step_days": SERIES_BETTING_STEP_DAYS, "series": series})
+                        "step_days": SERIES_BETTING_STEP_DAYS,
+                        "series": cumulative, "months": months})
     return markets
 
 
@@ -346,7 +465,25 @@ def read_case_study(results_root: Path) -> list[dict]:
     return panels
 
 
-def read_scores(csv_path: Path) -> list[dict]:
+def _score_row(r: dict) -> dict:
+    return {
+        "name": MODEL_LABELS.get(r["model"], r["model"]),
+        "kind": MODEL_KIND.get(r["model"], "llm"),
+        "score": round(float(r["BDRC_point"]), 3),
+        "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
+        "events": int(r["n_events"]),
+        "note": "",
+    }
+
+
+def _consensus_row(label: str) -> dict:
+    # The consensus is 0 by construction and is not a row in the CSV.
+    return {"name": label, "kind": "human", "score": 0.0,
+            "ci": None, "events": None, "note": "reference, 0 by construction"}
+
+
+def read_scores(csv_path: Path, consensus_label: str,
+                exclude: set[str] = frozenset()) -> list[dict]:
     if not csv_path.exists():
         sys.exit(
             f"scoring CSV not found:\n  {csv_path}\n\n"
@@ -362,28 +499,47 @@ def read_scores(csv_path: Path) -> list[dict]:
         if missing:
             sys.exit(f"{csv_path} is missing expected columns: {missing}")
         for r in reader:
-            model = r["model"]
-            if model in DROPPED:
+            if r["model"] in DROPPED or r["model"] in exclude:
                 continue
-            rows.append({
-                "name": MODEL_LABELS.get(model, model),
-                "kind": MODEL_KIND.get(model, "llm"),
-                "score": round(float(r["BDRC_point"]), 3),
-                "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
-                "events": int(r["n_events"]),
-                "note": "",
-            })
+            rows.append(_score_row(r))
 
     rows.sort(key=lambda x: -x["score"])
     if rows:
         rows[0]["note"] = "leads the panel"
-
-    # The consensus is 0 by construction and is not a row in the CSV.
-    rows.insert(0, {
-        "name": "Bloomberg ECOS consensus", "kind": "human", "score": 0.0,
-        "ci": None, "events": None, "note": "reference, 0 by construction",
-    })
+    rows.insert(0, _consensus_row(consensus_label))
     return rows
+
+
+def read_month_scores(csv_path: Path, consensus_label: str) -> list[dict]:
+    """One leaderboard panel per target month, from the by-month sibling of the
+    overlay (score_by_month_<MMDD>.py). Same columns and rounding as the
+    headline; each panel is the same statistic on that month's releases."""
+    if not csv_path.exists():
+        sys.exit(f"by-month CSV not found:\n  {csv_path}\n"
+                 "Run score_by_month_<MMDD>.py in the private checkout first, "
+                 "or drop --months-dir.")
+    need = ("model", "month") + COLS[1:]
+    by_month: dict[str, list[dict]] = {}
+    with csv_path.open() as fh:
+        reader = csv.DictReader(fh)
+        missing = [c for c in need if c not in (reader.fieldnames or [])]
+        if missing:
+            sys.exit(f"{csv_path} is missing expected columns: {missing}")
+        for r in reader:
+            if r["model"] in DROPPED:
+                continue
+            by_month.setdefault(r["month"], []).append(_score_row(r))
+
+    panels = []
+    for month in sorted(by_month):
+        rows = by_month[month]
+        rows.sort(key=lambda x: -x["score"])
+        rows[0]["note"] = "leads the month"
+        rows.insert(0, _consensus_row(consensus_label))
+        y, m = month.split("-")
+        panels.append({"key": month, "label": f"{MONTH_NAMES[int(m) - 1]} {y}",
+                       "rows": rows})
+    return panels
 
 
 def main() -> None:
@@ -397,6 +553,17 @@ def main() -> None:
     ap.add_argument("--overlay", default="bloomberg_overlay",
                     help="overlay dir under %s (default: %%(default)s)" % SCORING_SUBPATH)
     ap.add_argument("--window", default=None, help="override the headline window caption")
+    ap.add_argument("--months-dir", default=None,
+                    help="by-month sibling of the overlay under %s, written by "
+                         "score_by_month_<MMDD>.py; adds the month tabs to the "
+                         "leaderboard. Omit to publish the all-months table only."
+                         % SCORING_SUBPATH)
+    ap.add_argument("--consensus-label", default="Bloomberg ECOS consensus",
+                    help="name of the zero-by-construction reference row "
+                         "(default: %(default)s; an investing_overlay_* must pass "
+                         "'Investing.com consensus')")
+    ap.add_argument("--betting-window", default=None,
+                    help="override the LiveBetting window caption")
     ap.add_argument("--theme-plots", default=None,
                     help="dir holding plots_bloomberg_no_agent/, relative to --results-root "
                          "(default: the frozen paper backup %s; the live path is %s)"
@@ -431,8 +598,19 @@ def main() -> None:
     out = SITE / "data/leaderboard.json"
     data = json.loads(out.read_text())
 
+    if args.overlay.startswith("investing") and "bloomberg" in args.consensus_label.lower():
+        sys.exit("an investing_overlay_* scores against the Investing.com calendar "
+                 "consensus; pass --consensus-label 'Investing.com consensus' so the "
+                 "reference row is not mislabelled.")
+
     csv_path = args.results_root / SCORING_SUBPATH / args.overlay / "bloomberg_final_vs_final_ci.csv"
-    data["headline"]["rows"] = read_scores(csv_path)
+    data["headline"]["rows"] = read_scores(csv_path, args.consensus_label, exclude=LATE_ARMS)
+    if args.months_dir:
+        mpath = (args.results_root / SCORING_SUBPATH / args.months_dir
+                 / "final_vs_final_by_month_ci.csv")
+        data["headline"]["months"] = read_month_scores(mpath, args.consensus_label)
+    else:
+        data["headline"].pop("months", None)
     # Record the overlay by name only. The absolute private path stays out of the
     # published JSON.
     data["headline"]["source"] = f"{SCORING_SUBPATH}/{args.overlay}/ (not redistributed)"
@@ -447,6 +625,8 @@ def main() -> None:
 
         betting_dir = args.results_root / BETTING_SUBPATH / (args.betting_dir or PAPER_BETTING_DIR)
         data["betting"]["markets"] = read_betting(betting_dir)
+    if args.betting_window:
+        data["betting"]["window"] = args.betting_window
 
     stamp = (dt.date.fromisoformat(args.last_updated) if args.last_updated
              else dt.date.today())
@@ -487,10 +667,13 @@ def main() -> None:
     if series is not None:
         sp = SITE / "data/series.json"
         sp.write_text(json.dumps(series, separators=(",", ":")) + "\n")
-        n = sum(len(s["values"]) for m in series["betting"]["markets"]
-                for s in m["series"]) + sum(len(p["values"])
-                                            for p in series["case_study"]["panels"])
-        print(f"wrote docs/data/series.json  ({sp.stat().st_size} bytes, {n} points)")
+        mk = series["betting"]["markets"]
+        n_cum = sum(len(s["values"]) for m in mk for s in m["series"])
+        n_mon = sum(len(s["values"]) for m in mk for mo in m.get("months", [])
+                    for s in mo["series"])
+        n_case = sum(len(p["values"]) for p in series["case_study"]["panels"])
+        print(f"wrote docs/data/series.json  ({sp.stat().st_size} bytes; "
+              f"{n_cum} cumulative + {n_mon} month + {n_case} case-study points)")
 
     if not args.skip_figures:
         dest = SITE / "assets/figures"

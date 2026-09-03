@@ -218,11 +218,12 @@
       </div>
       <div class="card">
         <span class="tag">Consensus &amp; econometrics</span>
-        <h4>Bloomberg ECOS and auto-ARIMA</h4>
-        <p class="cardp"><a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
-          ECOS</a> is the professional economist consensus, covering all sixteen indicators, and it is
-          famously hard to beat. auto-ARIMA is a univariate time-series baseline, refit at the start
-          of every window.</p>
+        <h4>Professional consensus and auto-ARIMA</h4>
+        <p class="cardp">The economist consensus covers all sixteen indicators and is famously hard to
+          beat. The paper scores against <a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
+          ECOS</a>; the live board has used the Investing.com calendar consensus since May 2026, which
+          tracks the same survey almost exactly on the months where both exist. auto-ARIMA is a
+          univariate time-series baseline, refit at the start of every window.</p>
       </div>
     </div>
   </div>
@@ -257,6 +258,10 @@
 <section id="leaderboard">
   <div class="wrap">
     <h2>Leaderboard: LiveMacro Score</h2>
+    <p>The all-months view is the running score since the benchmark went live. Each month tab
+      scores only that month's releases, so it is noisier, and the ranking moves from month to
+      month. That is the point of a live benchmark: a single window is a sample, not a verdict.</p>
+    <div class="tabs" id="lb-tabs"></div>
     <div class="tablewrap">
       <table>
         <thead><tr>
@@ -274,12 +279,16 @@
 <section id="betting">
   <div class="wrap">
     <h2>Real-time return: LiveBetting Score</h2>
-    <p>On real GDP four agents finish the window with positive cumulative returns, and three beat the
-      Atlanta Fed, with only the New York Fed ahead. On the unemployment rate the leading agent
-      finishes above the Chicago Fed.</p>
-    <p>CPI is the exception. The Cleveland Fed and the Bloomberg consensus still beat every agent —
-      a real limit on indicators where institutional models are tuned to known economic structure.</p>
+    <p>Across the months since the paper window closed, the institutional nowcasts lead every market
+      that has one. On real GDP the two frontier agents still finish the window ahead of break-even and
+      above the Atlanta Fed; on CPI, the unemployment rate and payrolls every agent finishes in the
+      red, a real limit on indicators where institutional models are tuned to known economic
+      structure.</p>
+    <p>The all-months view stitches each month's window end to end and carries the bankroll across
+      them. A month tab re-bases at the start of that window, so it shows the return on that month's
+      bets alone; single months swing far more than the cumulative curve does.</p>
 
+    <div class="tabs" id="bet-tabs"></div>
     <!-- Drawn from data/series.json by main.js, not shipped as PNGs, so the
          curves carry the page's own type and palette. -->
     <div id="bet-charts"></div>
@@ -289,8 +298,8 @@
 <section id="themes">
   <div class="wrap">
     <h2>Score by theme: where the skill is</h2>
-    <p>Six months live. The top agent ties the professional consensus overall, but that aggregate
-      hides sharp differences across the economy.</p>
+    <p>Nine target months live. The top agent sits just below the professional consensus overall,
+      but that aggregate hides sharp differences across the economy.</p>
     <div class="tablewrap">
       <table class="themetable">
         <thead><tr id="th-head"></tr></thead>
@@ -298,8 +307,8 @@
       </table>
     </div>
     <p class="note" id="th-note">—</p>
-    <p>Agents beat the consensus on Supply &amp; Production and on Housing, both of which lean on
-      higher-frequency components that reward updating inside the window. They fall behind on Demand
+    <p>Agents beat the consensus on Supply &amp; Production and, for most arms, on Housing, both of
+      which lean on higher-frequency components that reward updating inside the window. They fall behind on Demand
       &amp; Inflation, where well-anchored expectations protect the professionals. The Labor Market
       sits near zero for every model, consistent with a signal-to-noise ceiling on the household
       survey.</p>
@@ -348,6 +357,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260901f"></script>
+<script src="assets/js/main.js?v=20260903a"></script>
 </body>
 </html>

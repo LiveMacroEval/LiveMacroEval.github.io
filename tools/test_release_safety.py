@@ -213,6 +213,51 @@ def m_series_too_many_numbers(d: Path):
         m2["series"] = [dict(proto, name=f"arm{i}") for i in range(12)]
     _write_series(d, o)
 
+# ---- the month tabs (2026-09-03): a month block is the same curve shape under
+# a second key, so every check above must reach into it too.
+
+def m_series_month_hourly_dump(d: Path):
+    o = _series(d)
+    o["betting"]["markets"][0]["months"][0]["series"][0]["values"] = [
+        round(i * 0.1, 1) for i in range(1500)]
+    _write_series(d, o)
+
+def m_series_month_extra_key(d: Path):
+    """Per-bet detail riding along inside a month tab's curve."""
+    o = _series(d)
+    o["betting"]["markets"][0]["months"][0]["series"][0]["bets"] = [1.0, 0.5, 0.25]
+    _write_series(d, o)
+
+def m_series_month_block_extra_key(d: Path):
+    o = _series(d)
+    o["betting"]["markets"][0]["months"][0]["prices"] = [0.31, 0.29, 0.33]
+    _write_series(d, o)
+
+def m_series_too_many_months(d: Path):
+    """A 'month' per market resolution instead of per target month."""
+    o = _series(d)
+    mk = o["betting"]["markets"][0]
+    proto = mk["months"][0]
+    mk["months"] = [dict(proto, key=f"2026-{i:02d}", label=f"m{i}") for i in range(13)]
+    _write_series(d, o)
+
+def m_month_row_extra_field(d: Path):
+    """leaderboard.json: a raw value added to a month tab's model row."""
+    p = d / "data/leaderboard.json"
+    j = json.loads(p.read_text())
+    j["headline"]["months"][0]["rows"][1]["raw_surprise"] = 0.42
+    p.write_text(json.dumps(j))
+
+def m_month_panels_per_release(d: Path):
+    """leaderboard.json: a 'month' tab per release is a per-release table."""
+    p = d / "data/leaderboard.json"
+    j = json.loads(p.read_text())
+    row = j["headline"]["months"][0]["rows"][1]
+    j["headline"]["months"] = [
+        {"key": f"r{i}", "label": f"release {i}", "rows": [dict(row, score=0.001 * i)]}
+        for i in range(200)]
+    p.write_text(json.dumps(j))
+
 
 CASES = [
     ("raw overlay CSV dropped in docs/",          m_raw_csv,             "not on the allowlist"),
@@ -245,6 +290,12 @@ CASES = [
     ("series.json: unexpected top-level key",     m_series_extra_top_key, "unexpected top-level"),
     ("series.json: inflated past byte cap",       m_series_oversized,    "exceeds the"),
     ("series.json: too many numeric literals",    m_series_too_many_numbers, "cap"),
+    ("series.json: hourly dump inside a month tab", m_series_month_hourly_dump, "exceeds the"),
+    ("series.json: per-bet detail in a month curve", m_series_month_extra_key, "unexpected key"),
+    ("series.json: prices smuggled into a month block", m_series_month_block_extra_key, "unexpected key"),
+    ("series.json: a month tab per resolution",    m_series_too_many_months, "months exceeds"),
+    ("leaderboard.json: raw value in a month row", m_month_row_extra_field, "unknown key"),
+    ("leaderboard.json: a month tab per release",  m_month_panels_per_release, "exceeds the 30 cap"),
 ]
 
 

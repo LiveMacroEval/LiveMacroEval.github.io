@@ -73,36 +73,80 @@ function panelHeader(label) {
   return `<tr class="grouphdr"><td colspan="6">${esc(label)}</td></tr>`;
 }
 
+/* A strip of tab buttons. `views` is [{key, label}]; `pick` receives the key.
+   Used by the leaderboard (one tab per target month) and the LiveBetting
+   charts (one per betting window). Real buttons with tab roles, so a keyboard
+   reaches them and a screen reader hears which one is selected. */
+function tabStrip(mount, views, active, pick) {
+  mount.innerHTML = '';
+  mount.setAttribute('role', 'tablist');
+  views.forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', v.key === active ? 'true' : 'false');
+    b.textContent = v.label;
+    b.addEventListener('click', () => pick(v.key));
+    mount.appendChild(b);
+  });
+}
+
 /* The headline evaluation and the agent-design experiment render as two
    panels of a single table. They share the metric and the bar scale, but not
-   the window or the consensus source -- hence the panel captions. */
+   the window or the consensus source -- hence the panel captions.
+
+   The headline panel is tabbed: "All months" is the running score, and each
+   month tab is the same statistic on that month's releases only. The
+   agent-design panel is a separate, coverage-matched comparison, so it stays
+   put underneath whichever tab is open. */
 function renderLeaderboard(h, a) {
   const body = byId('lb-body');
   if (!body) return;
-  const all = [...h.rows.map(r => r.score), ...a.rows.map(r => r.score)];
-  const max = Math.max(...all.map(Math.abs)) || 1;
-  const html = [];
+  const views = [{ key: 'all', label: 'All months', rows: h.rows, window: h.window,
+                   note: h.note }]
+    .concat((h.months || []).map(m => ({
+      key: m.key, label: m.label, rows: m.rows,
+      window: `Target month ${m.label}`, note: h.month_note || h.note,
+    })));
+  let active = 'all';
+  const tabs = byId('lb-tabs');
 
-  html.push(panelHeader(h.window));
-  const bestH = Math.max(...h.rows.filter(x => x.kind === 'llm').map(x => x.score));
-  let rank = 0;
-  for (const r of h.rows) {
-    const isRef = r.ci === null && r.score === 0;
-    if (!isRef) rank++;
-    html.push(leaderRow(r, rank, isRef, r.kind === 'llm' && r.score === bestH, max));
+  function draw() {
+    const v = views.find(x => x.key === active) || views[0];
+    const all = [...v.rows.map(r => r.score), ...a.rows.map(r => r.score)];
+    const max = Math.max(...all.map(Math.abs)) || 1;
+    const html = [];
+
+    html.push(panelHeader(v.window));
+    const llm = v.rows.filter(x => x.kind === 'llm').map(x => x.score);
+    const bestH = llm.length ? Math.max(...llm) : NaN;
+    let rank = 0;
+    for (const r of v.rows) {
+      const isRef = r.ci === null && r.score === 0;
+      if (!isRef) rank++;
+      html.push(leaderRow(r, rank, isRef, r.kind === 'llm' && r.score === bestH, max));
+    }
+
+    html.push(panelHeader(`${a.title} — ${a.window}`));
+    rank = 0;
+    for (const r of a.rows) {
+      const isRef = r.kind === 'human';
+      if (!isRef) rank++;
+      html.push(leaderRow(r, rank, isRef, !!r.best, max));
+    }
+
+    body.innerHTML = html.join('');
+    const note = byId('lb-note');
+    if (note) note.textContent = `${v.note} ${a.note}`;
   }
-
-  html.push(panelHeader(`${a.title} — ${a.window}`));
-  rank = 0;
-  for (const r of a.rows) {
-    const isRef = r.kind === 'human';
-    if (!isRef) rank++;
-    html.push(leaderRow(r, rank, isRef, !!r.best, max));
+  function pick(key) {
+    active = key;
+    if (tabs) tabStrip(tabs, views, active, pick);
+    draw();
   }
-
-  body.innerHTML = html.join('');
-  const note = byId('lb-note');
-  if (note) note.textContent = `${h.note} ${a.note}`;
+  if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
+  draw();
 }
 
 /* Models down the side, themes across the top. */
@@ -177,6 +221,9 @@ const SERIES_COLORS = {
   'Qwen3-80B': 'var(--s-slate)',
   'Claude Code multi-agent': 'var(--s-gold)',
   'GPT-5 (reasoned)': 'var(--s-teal-lt)',
+  // the pipeline draws this arm in a pale apricot that has no contrast on
+  // white; purple is free now that Qwen is off the betting charts
+  'Claude Code agent': 'var(--s-purple)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 
@@ -204,12 +251,22 @@ function niceScale(lo, hi, want) {
 
 /* Push overlapping end-labels apart so a crowded right edge stays readable.
    The paper figures label lines directly rather than using a legend box; this
-   keeps that, which is why the collision pass is needed at all. */
-function declutter(items, minGap) {
+   keeps that, which is why the collision pass is needed at all. Two passes:
+   down to open the gaps, then back up from `yMax` so a stack of series that
+   all end at the floor (three arms at -100% in a month view) climbs above the
+   axis instead of sliding into the tick labels. */
+function declutter(items, minGap, yMin, yMax) {
   items.sort((a, b) => a.y - b.y);
   for (let i = 1; i < items.length; i++) {
     if (items[i].y - items[i - 1].y < minGap) items[i].y = items[i - 1].y + minGap;
   }
+  if (items.length && yMax !== undefined && items[items.length - 1].y > yMax) {
+    items[items.length - 1].y = yMax;
+    for (let i = items.length - 2; i >= 0; i--) {
+      if (items[i + 1].y - items[i].y < minGap) items[i].y = items[i + 1].y - minGap;
+    }
+  }
+  if (yMin !== undefined) items.forEach(l => { l.y = Math.max(l.y, yMin); });
   return items;
 }
 
@@ -222,7 +279,12 @@ function lineChart(mount, spec) {
   const xlo = Math.min(...xs.map(p => p[0])), xhi = Math.max(...xs.map(p => p[1]));
   const flat = spec.series.flatMap(s => s.values).filter(v => v !== null && isFinite(v));
   if (!flat.length) return;
-  const y = niceScale(Math.min(...flat), Math.max(...flat), 5);
+  // a chart may pin a reference level into the range: break-even for the
+  // betting curves, so a month in which every arm lost still shows how far
+  // below zero it sits rather than zooming into the losses
+  const lo = spec.yInclude === undefined ? Math.min(...flat) : Math.min(...flat, spec.yInclude);
+  const hi = spec.yInclude === undefined ? Math.max(...flat) : Math.max(...flat, spec.yInclude);
+  const y = niceScale(lo, hi, 5);
   const X = v => M.l + (xhi === xlo ? 0 : (v - xlo) / (xhi - xlo)) * iw;
   const Y = v => M.t + ih - (v - y.lo) / (y.hi - y.lo) * ih;
 
@@ -241,7 +303,7 @@ function lineChart(mount, spec) {
   }
   // the zero line carries meaning on both chart families: break-even for the
   // betting curves, and the consensus reference for the scores.
-  if (y.lo < 0 && y.hi > 0) {
+  if (y.lo <= 0 && y.hi >= 0) {
     svg.appendChild(el('line', { x1: M.l, x2: M.l + iw, y1: Y(0), y2: Y(0), class: 'zero' }));
   }
   // x axis
@@ -291,9 +353,9 @@ function lineChart(mount, spec) {
     if (lastY !== null) labels.push({ y: lastY, name: s.name, color: s.color });
   });
 
-  declutter(labels, 15).forEach(l => {
+  declutter(labels, 15, M.t + 6, M.t + ih + 4).forEach(l => {
     svg.appendChild(el('text', {
-      x: M.l + iw + 8, y: Math.min(Math.max(l.y + 4, 12), H - 4),
+      x: M.l + iw + 8, y: l.y + 4,
       class: 'endlab', fill: l.color,
     }, l.name));
   });
@@ -396,33 +458,84 @@ const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '%';
 function renderBettingCharts(b) {
   const mount = byId('bet-charts');
   if (!mount || !b || !b.markets) return;
-  mount.innerHTML = '';
-  b.markets.forEach(m => {
-    const fig = document.createElement('figure');
-    fig.className = 'chartfig';
-    const box = document.createElement('div');
-    fig.appendChild(box);
-    const cap = document.createElement('figcaption');
-    cap.innerHTML = `<b>${esc(m.label)}</b> — cumulative LiveBetting return.`;
-    fig.appendChild(cap);
-    mount.appendChild(fig);
 
+  // one tab strip for the section: the union of every market's months, so a
+  // click moves all four charts to the same window. A market with no round
+  // for that month keeps its slot with a note rather than vanishing.
+  const monthLabel = {};
+  b.markets.forEach(m => (m.months || []).forEach(mo => { monthLabel[mo.key] = mo.label; }));
+  // keys are YYYY-MM or YYYY-Qn: lexical order puts the quarter after the months
+  const views = [{ key: 'all', label: 'All months' }]
+    .concat(Object.keys(monthLabel).sort().map(k => ({ key: k, label: monthLabel[k] })));
+  let active = 'all';
+  const tabs = byId('bet-tabs');
+
+  // A series keeps its colour across tabs: baselines are numbered by their
+  // order in the cumulative view of that market, and the month views reuse
+  // the map, so the NY Fed is the same blue in Q2 as in the whole run.
+  const colorMaps = b.markets.map(m => {
+    const map = {};
     let bi = 0;
-    const series = m.series.map(s => ({
-      name: s.name, x0: s.start, values: s.values,
-      dash: s.kind === 'human',
-      color: SERIES_COLORS[s.name] || (s.kind === 'human'
-        ? BASELINE_COLORS[bi++ % BASELINE_COLORS.length] : 'var(--s-grey)'),
-    }));
-    lineChart(box, {
-      series, height: 300,
-      alt: `Cumulative LiveBetting return on ${m.label}, by model and baseline`,
-      xLabel: 'Days since nowcasting start',
-      fmt: v => pct(v), xfmt: v => '+' + Math.round(v),
-      xtipfmt: v => 'Day +' + Math.round(v),
-      tipfmt: v => pct(v),
+    m.series.forEach(s => {
+      map[s.name] = SERIES_COLORS[s.name] || (s.kind === 'human'
+        ? BASELINE_COLORS[bi++ % BASELINE_COLORS.length] : 'var(--s-grey)');
     });
+    return map;
   });
+  const colorFor = (k, s) => colorMaps[k][s.name] || SERIES_COLORS[s.name]
+    || (s.kind === 'human' ? BASELINE_COLORS[0] : 'var(--s-grey)');
+
+  function draw() {
+    mount.innerHTML = '';
+    b.markets.forEach((m, k) => {
+      const fig = document.createElement('figure');
+      fig.className = 'chartfig';
+      const box = document.createElement('div');
+      fig.appendChild(box);
+      const cap = document.createElement('figcaption');
+      fig.appendChild(cap);
+      mount.appendChild(fig);
+
+      let curves, xLabel, tail;
+      if (active === 'all') {
+        curves = m.series;
+        xLabel = 'Days since nowcasting start';
+        tail = 'cumulative LiveBetting return, every month end to end.';
+      } else {
+        const mo = (m.months || []).find(x => x.key === active);
+        if (!mo) {
+          box.className = 'chartempty';
+          box.textContent = `No Polymarket round on ${m.label} for ${monthLabel[active]}.`;
+          cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(monthLabel[active])}.`;
+          return;
+        }
+        curves = mo.series;
+        xLabel = `Days since the ${mo.label} window opened`;
+        tail = `LiveBetting return on the ${esc(mo.label)} bets alone.`;
+      }
+      cap.innerHTML = `<b>${esc(m.label)}</b> — ${tail}`;
+
+      const series = curves.map(s => ({
+        name: s.name, x0: s.start, values: s.values,
+        dash: s.kind === 'human', color: colorFor(k, s),
+      }));
+      lineChart(box, {
+        series, height: 300, yInclude: 0,
+        alt: `LiveBetting return on ${m.label}, by model and baseline`,
+        xLabel,
+        fmt: v => pct(v), xfmt: v => '+' + Math.round(v),
+        xtipfmt: v => 'Day +' + Math.round(v),
+        tipfmt: v => pct(v),
+      });
+    });
+  }
+  function pick(key) {
+    active = key;
+    if (tabs) tabStrip(tabs, views, active, pick);
+    draw();
+  }
+  if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
+  draw();
 }
 
 function renderCaseCharts(c) {
