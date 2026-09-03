@@ -5,12 +5,12 @@
   "headline": {
     "title": "LiveMacro Score \u2014 headline evaluation",
     "window": "Target reference periods Nov 2025 \u2013 Jul 2026 (official releases Dec 1, 2025 \u2013 Aug 18, 2026)",
-    "note": "Live board. Higher is better. 0.000 = ties the professional consensus (the Investing.com calendar forecast; Bloomberg ECOS in the paper, which it tracks almost exactly); +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2. Claude Code multi-agent and GPT-5 (reasoned) went live in June 2026 and score too few months to sit beside nine-month arms; they appear in the month tabs from June and in the coverage-matched panel below.",
-    "month_note": "Each month tab scores only the releases for that reference month (advance GDP counts in the last month of its quarter), with the same metric and 90% parametric-bootstrap CIs as the all-months table; Events is that month's count. An arm is listed only for months it was live.",
+    "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2.",
+    "month_note": "Each month tab scores only the releases for that reference month, with the same metric and 90% parametric-bootstrap CIs as the all-months table; Events is that month's count. Advance GDP counts in the last month of its quarter, and a release that carries fields from two reference months counts whole in the month most of its fields belong to. An arm is listed only for months it was live.",
     "source": "market_surprise_capture_score/step_15_4_live_scoring/investing_overlay_0825/ (not redistributed)",
     "rows": [
       {
-        "name": "Investing.com consensus",
+        "name": "Bloomberg ECOS consensus",
         "kind": "human",
         "score": 0.0,
         "ci": null,
@@ -27,6 +27,17 @@
         ],
         "events": 90,
         "note": "leads the panel"
+      },
+      {
+        "name": "Claude Code multi-agent",
+        "kind": "llm",
+        "score": -0.02,
+        "ci": [
+          -0.04,
+          -0.003
+        ],
+        "events": 18,
+        "note": ""
       },
       {
         "name": "Claude-4.5-Sonnet",
@@ -48,6 +59,17 @@
           -0.059
         ],
         "events": 61,
+        "note": ""
+      },
+      {
+        "name": "GPT-5 (reasoned)",
+        "kind": "llm",
+        "score": -0.13,
+        "ci": [
+          -0.216,
+          -0.076
+        ],
+        "events": 18,
         "note": ""
       },
       {
@@ -79,7 +101,7 @@
         "label": "Nov 2025",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -115,7 +137,7 @@
         "label": "Dec 2025",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -162,7 +184,7 @@
         "label": "Jan 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -170,58 +192,58 @@
             "note": "reference, 0 by construction"
           },
           {
-            "name": "GPT-5",
-            "kind": "llm",
-            "score": 0.031,
-            "ci": [
-              0.022,
-              0.039
-            ],
-            "events": 11,
-            "note": "leads the month"
-          },
-          {
             "name": "Qwen3-80B",
             "kind": "llm",
-            "score": 0.007,
+            "score": 0.843,
             "ci": [
-              -0.025,
-              0.028
+              0.445,
+              0.856
             ],
-            "events": 5,
-            "note": ""
+            "events": 4,
+            "note": "leads the month"
           },
           {
             "name": "Qwen3-235B",
             "kind": "llm",
-            "score": -0.006,
+            "score": 0.298,
             "ci": [
-              -0.025,
-              0.013
+              0.18,
+              0.408
             ],
-            "events": 5,
+            "events": 4,
+            "note": ""
+          },
+          {
+            "name": "GPT-5",
+            "kind": "llm",
+            "score": 0.118,
+            "ci": [
+              0.094,
+              0.137
+            ],
+            "events": 10,
             "note": ""
           },
           {
             "name": "Claude-4.5-Sonnet",
             "kind": "llm",
-            "score": -0.021,
+            "score": 0.004,
             "ci": [
-              -0.035,
-              -0.01
+              -0.011,
+              0.012
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           },
           {
             "name": "auto-ARIMA",
             "kind": "econ",
-            "score": -0.173,
+            "score": -0.32,
             "ci": [
-              -0.216,
-              -0.132
+              -0.392,
+              -0.246
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           }
         ]
@@ -231,7 +253,7 @@
         "label": "Feb 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -241,32 +263,32 @@
           {
             "name": "GPT-5",
             "kind": "llm",
-            "score": 0.016,
+            "score": 0.011,
             "ci": [
-              0.008,
-              0.024
+              0.002,
+              0.019
             ],
             "events": 10,
             "note": "leads the month"
           },
           {
-            "name": "auto-ARIMA",
-            "kind": "econ",
-            "score": 0.01,
+            "name": "Claude-4.5-Sonnet",
+            "kind": "llm",
+            "score": -0.006,
             "ci": [
-              0.002,
-              0.017
+              -0.013,
+              0.001
             ],
             "events": 10,
             "note": ""
           },
           {
-            "name": "Claude-4.5-Sonnet",
-            "kind": "llm",
-            "score": 0.008,
+            "name": "auto-ARIMA",
+            "kind": "econ",
+            "score": -0.011,
             "ci": [
-              0.005,
-              0.011
+              -0.024,
+              0.002
             ],
             "events": 10,
             "note": ""
@@ -274,10 +296,10 @@
           {
             "name": "Qwen3-235B",
             "kind": "llm",
-            "score": -0.008,
+            "score": -0.022,
             "ci": [
-              -0.021,
-              0.003
+              -0.036,
+              -0.009
             ],
             "events": 10,
             "note": ""
@@ -285,10 +307,10 @@
           {
             "name": "Qwen3-80B",
             "kind": "llm",
-            "score": -0.037,
+            "score": -0.055,
             "ci": [
-              -0.063,
-              -0.017
+              -0.082,
+              -0.034
             ],
             "events": 10,
             "note": ""
@@ -300,7 +322,7 @@
         "label": "Mar 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -310,56 +332,56 @@
           {
             "name": "Claude-4.5-Sonnet",
             "kind": "llm",
-            "score": -0.009,
+            "score": -0.002,
             "ci": [
-              -0.034,
-              0.01
+              -0.029,
+              0.019
             ],
-            "events": 10,
+            "events": 9,
             "note": "leads the month"
           },
           {
             "name": "Qwen3-235B",
             "kind": "llm",
-            "score": -0.164,
+            "score": -0.173,
             "ci": [
-              -0.274,
-              -0.089
+              -0.287,
+              -0.094
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           },
           {
             "name": "GPT-5",
             "kind": "llm",
-            "score": -0.169,
+            "score": -0.195,
             "ci": [
-              -0.39,
-              0.027
+              -0.414,
+              0.005
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           },
           {
             "name": "auto-ARIMA",
             "kind": "econ",
-            "score": -0.494,
+            "score": -0.508,
             "ci": [
-              -0.612,
-              -0.36
+              -0.626,
+              -0.371
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           },
           {
             "name": "Qwen3-80B",
             "kind": "llm",
-            "score": -0.572,
+            "score": -0.54,
             "ci": [
-              -0.663,
-              -0.473
+              -0.643,
+              -0.419
             ],
-            "events": 11,
+            "events": 10,
             "note": ""
           }
         ]
@@ -369,7 +391,7 @@
         "label": "Apr 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -379,7 +401,7 @@
           {
             "name": "Qwen3-235B",
             "kind": "llm",
-            "score": 0.117,
+            "score": 0.116,
             "ci": [
               0.06,
               0.154
@@ -388,23 +410,12 @@
             "note": "leads the month"
           },
           {
-            "name": "Qwen3-80B",
-            "kind": "llm",
-            "score": -0.025,
-            "ci": [
-              -0.047,
-              -0.004
-            ],
-            "events": 11,
-            "note": ""
-          },
-          {
             "name": "Claude-4.5-Sonnet",
             "kind": "llm",
-            "score": -0.028,
+            "score": -0.03,
             "ci": [
-              -0.061,
-              0.004
+              -0.063,
+              0.0
             ],
             "events": 11,
             "note": ""
@@ -412,10 +423,21 @@
           {
             "name": "GPT-5",
             "kind": "llm",
-            "score": -0.094,
+            "score": -0.083,
             "ci": [
-              -0.158,
-              -0.035
+              -0.149,
+              -0.022
+            ],
+            "events": 11,
+            "note": ""
+          },
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "score": -0.118,
+            "ci": [
+              -0.183,
+              -0.067
             ],
             "events": 11,
             "note": ""
@@ -423,10 +445,10 @@
           {
             "name": "auto-ARIMA",
             "kind": "econ",
-            "score": -0.128,
+            "score": -0.131,
             "ci": [
-              -0.172,
-              -0.087
+              -0.175,
+              -0.091
             ],
             "events": 11,
             "note": ""
@@ -438,7 +460,7 @@
         "label": "May 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -507,7 +529,7 @@
         "label": "Jun 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -598,7 +620,7 @@
         "label": "Jul 2026",
         "rows": [
           {
-            "name": "Investing.com consensus",
+            "name": "Bloomberg ECOS consensus",
             "kind": "human",
             "score": 0.0,
             "ci": null,
@@ -689,7 +711,7 @@
   "themes": {
     "title": "LiveMacro Score by theme",
     "window": "Same live window as the all-months leaderboard.",
-    "note": "Each column restricts the score to the indicators in that theme. Positive means the model beat the professional consensus on that block of the economy.",
+    "note": "Each column restricts the score to the indicators in that theme. Positive means the model beat the Bloomberg consensus on that block of the economy.",
     "columns": [
       "Supply & Production",
       "Demand & Inflation",
@@ -771,7 +793,7 @@
   },
   "betting": {
     "title": "LiveBetting Score",
-    "window": "Target windows Feb \u2013 Jul 2026; Q2 2026 for real GDP.",
+    "window": "Target windows Feb \u2013 Jul 2026; Q1 and Q2 2026 for real GDP.",
     "note": "Cumulative return on a stream of hourly $1 bets, ending at the official release. Institutional nowcasts are drawn where one exists; payrolls has none. Both Qwen arms are omitted: an upstream change to their job in July 2026 shifted every nowcast at once, and the wins that followed in an open-ended CPI bucket are not a nowcasting signal.",
     "markets": [
       {

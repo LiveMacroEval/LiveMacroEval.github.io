@@ -218,12 +218,11 @@
       </div>
       <div class="card">
         <span class="tag">Consensus &amp; econometrics</span>
-        <h4>Professional consensus and auto-ARIMA</h4>
-        <p class="cardp">The economist consensus covers all sixteen indicators and is famously hard to
-          beat. The paper scores against <a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
-          ECOS</a>; the live board has used the Investing.com calendar consensus since May 2026, which
-          tracks the same survey almost exactly on the months where both exist. auto-ARIMA is a
-          univariate time-series baseline, refit at the start of every window.</p>
+        <h4>Bloomberg ECOS and auto-ARIMA</h4>
+        <p class="cardp"><a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
+          ECOS</a> is the professional economist consensus, covering all sixteen indicators, and it is
+          famously hard to beat. auto-ARIMA is a univariate time-series baseline, refit at the start
+          of every window.</p>
       </div>
     </div>
   </div>
@@ -284,13 +283,13 @@
       above the Atlanta Fed; on CPI, the unemployment rate and payrolls every agent finishes in the
       red, a real limit on indicators where institutional models are tuned to known economic
       structure.</p>
-    <p>The all-months view stitches each month's window end to end and carries the bankroll across
-      them. A month tab re-bases at the start of that window, so it shows the return on that month's
-      bets alone; single months swing far more than the cumulative curve does.</p>
+    <p>The all-months view stitches each window end to end and carries the bankroll across them.
+      A month tab (a quarter, for GDP) re-bases at the start of that window, so it shows the return
+      on that window's bets alone; single windows swing far more than the cumulative curve does.</p>
 
-    <div class="tabs" id="bet-tabs"></div>
     <!-- Drawn from data/series.json by main.js, not shipped as PNGs, so the
-         curves carry the page's own type and palette. -->
+         curves carry the page's own type and palette. Each chart carries its
+         own tab strip: the markets resolve on different calendars. -->
     <div id="bet-charts"></div>
   </div>
 </section>
@@ -357,6 +356,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903a"></script>
+<script src="assets/js/main.js?v=20260903b"></script>
 </body>
 </html>

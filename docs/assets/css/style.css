@@ -437,21 +437,36 @@ svg.chart .hoverdot  { stroke: var(--bg); stroke-width: 1.6; }
 }
 
 /* ---- month tabs ----------------------------------------------------------
-   Pickers above the leaderboard and the LiveBetting charts: "All months" and
-   one tab per target month. Outline chips in the .btn family -- the selected
-   one takes the full-ink contour and the soft ground, the rest the border
-   tone -- and no filled state, for the same reason .btn has none. */
-.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+   Pickers above the leaderboard and above each LiveBetting chart: the
+   aggregate first, then the months newest to oldest. The strip scrolls
+   sideways instead of wrapping, so it stays one line however many months
+   accumulate, and the aggregate tab is sticky at the left edge so it is
+   always in reach. Teal, in the accent family: outline chips at rest, the
+   selected one filled with the ink tone (var(--bg) text, never a literal
+   white -- --accent-ink inverts with the theme). */
+.tabs {
+  display: flex; flex-wrap: nowrap; gap: 6px; margin: 0 0 14px;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  padding: 2px 2px 6px;
+  -webkit-overflow-scrolling: touch;
+}
 .tab {
+  flex: none;
   font-family: var(--text); font-size: 12.5px; font-weight: 600; line-height: 1;
   font-variant-numeric: tabular-nums;
   padding: 6px 10px; border-radius: 3px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--bg-card); color: var(--fg-muted);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: var(--bg-card); color: var(--accent-ink);
   transition: .15s;
 }
-.tab:hover { border-color: var(--fg); color: var(--fg); }
-.tab[aria-selected="true"] { border-color: var(--fg); color: var(--fg); background: var(--bg-soft); }
+.tab:hover { background: var(--accent-soft); border-color: var(--accent-ink); }
+.tab[aria-selected="true"] {
+  background: var(--accent-ink); border-color: var(--accent-ink); color: var(--bg);
+}
+.tab.first { position: sticky; left: 0; z-index: 1; box-shadow: 0 0 0 3px var(--bg); }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+figure.chartfig .tabs { margin-bottom: 10px; }
 /* a market with no Polymarket round for the chosen month keeps its slot */
 .chartempty {
   border: 1px dashed var(--border); border-radius: 4px; padding: 28px 16px;

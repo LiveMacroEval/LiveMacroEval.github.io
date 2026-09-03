@@ -27,7 +27,6 @@ Usage
     python tools/update_site.py --dry-run
     python tools/update_site.py \
         --overlay investing_overlay_0825 --months-dir investing_overlay_0825_by_month \
-        --consensus-label "Investing.com consensus" \
         --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
         --betting-dir continuous_returns_20260831 \
         --window "Target reference periods Nov 2025 - Jul 2026" \
@@ -77,13 +76,10 @@ MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 # Figure 2 in the paper drops this arm (n=11 outlier); keep the site consistent.
 DROPPED = {"claude-code-agent"}
 
-# Arms that went live in June 2026 have two months of events, and the pipeline
-# scores every arm on its OWN event set, so their all-months score is not
-# comparable with a nine-month arm's (the private UPDATE_PIPELINE.md, step 4c:
-# never quote them side by side). They are left out of the cumulative table --
-# the coverage-matched agent-design panel is where they are compared -- and
-# appear in the month tabs, where every arm scores the same month's releases.
-LATE_ARMS = {"claude-code-multiagent", "gpt-5-search-api-reasoned"}
+# The arms that went live in June 2026 sit in the all-months table like every
+# other arm (user decision 2026-09-03: the 0825 window covers their whole live
+# span, so nothing is non-overlapping), in the month tabs for the months they
+# have events, and simply absent from earlier months.
 
 # Only these columns are ever read out of the overlay. Aggregates only.
 COLS = ("model", "n_events", "BDRC_point", "BDRC_ci90_lo", "BDRC_ci90_hi")
@@ -135,6 +131,10 @@ BETTING_MARKETS = [
     # and a market whose CSV is absent is skipped with a printed note.
     ("nonfarm_payrolls_change", "Nonfarm Payrolls"),
 ]
+# A quarterly market's tab is the whole quarter: the Q1 GDP market is bet
+# across a "feb" and a "mar" segment (the paper's split of one window), and
+# the tab merges them, re-based once at the Feb shared start.
+QUARTERLY_MARKETS = {"real_gdp_qoq"}
 
 # Segment tags written by the continuous-returns scripts: three-letter target
 # months, plus "q2" for the second-quarter GDP market.
@@ -289,6 +289,16 @@ def _segment_label(tag: str, first_bet: dt.datetime | None) -> tuple[str, str]:
     return f"{year}-{mnum:02d}", f"{MONTH_NAMES[mnum - 1]} {year}"
 
 
+def _window_of(market_key: str, tag: str, first_bet: dt.datetime | None) -> tuple[str, str]:
+    """The tab a segment belongs to: its month, or its quarter on a quarterly market."""
+    key, label = _segment_label(tag, first_bet)
+    if market_key in QUARTERLY_MARKETS and "-Q" not in key and "-" in key:
+        y, m = key.split("-")
+        q = (int(m) - 1) // 3 + 1
+        return f"{y}-Q{q}", f"Q{q} {y}"
+    return key, label
+
+
 def _curve(arm: str, cell: dict[int, tuple[float, float]]) -> dict:
     """One published curve from {day -> (x, value)}: null for a day with no
     bet, so the chart can break the line."""
@@ -311,18 +321,23 @@ def _final(curve: dict) -> float:
 
 def read_betting_series(betting_dir: Path) -> list[dict]:
     """Cumulative-return curves, one point per day of stitched time, plus the
-    same bets re-based month by month for the month tabs.
+    same bets re-based window by window for the month tabs.
 
     `stitched_x_days` is the x-axis the paper figure plots, so downsampling on
     it keeps the shape identical while cutting ~1,400 hourly points per market
     to a few dozen. Arms join the chart at their own first bet, so each series
     carries its own `start` offset rather than a shared x grid.
 
-    A month view re-bases each arm at the start of that month's segment:
-    return = (profit - profit at segment start) / (dollars bet since), so the
-    tab shows the return on THAT month's bets alone. Day 0 of a month is the
-    segment's shared start -- the anchor arm's first bet, the same instant for
-    every arm -- and an arm that joins later starts at its own first day.
+    A tab window is a target month, or a quarter on a quarterly market. Its
+    curve re-bases each arm at the window's start:
+        return = (profit - profit at window start) / (dollars bet since),
+    so the tab shows the return on THAT window's bets alone, and the windows'
+    profits and stakes add back up to the cumulative curve. The pipeline's
+    stitched series is continuous across segments (each segment's first row is
+    the previous last row plus one bet), so an arm's last row before the window
+    IS its window-start total. Day 0 is the window's earliest kept bet (the
+    shared start, the same instant for every arm), measured in real time; an
+    arm that joins later starts at its own first day.
     """
     markets = []
     for key, label in BETTING_MARKETS:
@@ -336,62 +351,75 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
             arm = r["model"]
             if arm in BETTING_DROPPED:
                 continue
+            ts = _parse_ts(r["datetime_utc"])
+            if ts is None:
+                sys.exit(f"{path.name}: unparseable datetime_utc {r['datetime_utc']!r}")
             rows_by_arm.setdefault(arm, []).append((
                 float(r["stitched_x_days"]), r["segment"],
                 float(r["cumulative_profit"]), float(r["cumulative_invested"]),
-                float(r["cumulative_return_pct"]), _parse_ts(r["datetime_utc"]),
+                float(r["cumulative_return_pct"]), ts,
             ))
-        # day 0 of a segment is the earliest stitched x any arm reaches in it
+        # segments in chart order, each mapped to its tab window; a window
+        # opens at the earliest kept bet any arm places in it
         seg_lo: dict[str, float] = {}
-        seg_first: dict[str, dt.datetime | None] = {}
+        seg_first: dict[str, dt.datetime] = {}
         for rows in rows_by_arm.values():
             for x, seg, _p, _i, _ret, ts in rows:
                 if seg not in seg_lo or x < seg_lo[seg]:
                     seg_lo[seg] = x
+                if seg not in seg_first or ts < seg_first[seg]:
                     seg_first[seg] = ts
         seg_order = sorted(seg_lo, key=seg_lo.get)
+        win_of: dict[str, str] = {}
+        win_label: dict[str, str] = {}
+        win_t0: dict[str, dt.datetime] = {}
+        for seg in seg_order:
+            wkey, wlabel = _window_of(key, seg, seg_first[seg])
+            win_of[seg] = wkey
+            win_label.setdefault(wkey, wlabel)
+            if wkey not in win_t0 or seg_first[seg] < win_t0[wkey]:
+                win_t0[wkey] = seg_first[seg]
+        win_order = list(dict.fromkeys(win_of[seg] for seg in seg_order))
 
         cumulative: list[dict] = []
-        by_month: dict[str, list[dict]] = {seg: [] for seg in seg_order}
+        by_win: dict[str, list[dict]] = {w: [] for w in win_order}
+        day = dt.timedelta(days=SERIES_BETTING_STEP_DAYS)
         for arm, rows in rows_by_arm.items():
             rows.sort(key=lambda t: t[0])
             cell: dict[int, tuple[float, float]] = {}
-            seg_cells: dict[str, dict[int, tuple[float, float]]] = {}
+            win_cells: dict[str, dict[int, tuple[float, float]]] = {}
             cur = None
             p0 = i0 = last_p = last_i = 0.0
-            for x, seg, profit, invested, ret, _ts in rows:
-                day = int(x // SERIES_BETTING_STEP_DAYS)
+            for x, seg, profit, invested, ret, ts in rows:
+                d = int(x // SERIES_BETTING_STEP_DAYS)
                 # last observation within the day wins
-                if day not in cell or x > cell[day][0]:
-                    cell[day] = (x, ret)
-                if seg != cur:
-                    # a new month: re-base on the running totals at its start.
-                    # The stitched series is continuous across segments (each
-                    # segment's first row is the previous last row plus one
-                    # bet), so the previous row IS the segment-start total.
-                    p0, i0, cur = last_p, last_i, seg
+                if d not in cell or x > cell[d][0]:
+                    cell[d] = (x, ret)
+                w = win_of[seg]
+                if w != cur:
+                    # a new window: re-base on the running totals at its start
+                    p0, i0, cur = last_p, last_i, w
                 last_p, last_i = profit, invested
                 bet = invested - i0
                 if bet <= 0:
                     continue
-                seg_ret = (profit - p0) / bet * 100.0
-                sday = int((x - seg_lo[seg]) // SERIES_BETTING_STEP_DAYS)
-                sc = seg_cells.setdefault(seg, {})
-                if sday not in sc or x > sc[sday][0]:
-                    sc[sday] = (x, seg_ret)
+                wret = (profit - p0) / bet * 100.0
+                wd = int((ts - win_t0[w]) // day)
+                wc = win_cells.setdefault(w, {})
+                if wd not in wc or x > wc[wd][0]:
+                    wc[wd] = (x, wret)
             cumulative.append(_curve(arm, cell))
-            for seg, sc in seg_cells.items():
-                by_month[seg].append(_curve(arm, sc))
+            for w, wc in win_cells.items():
+                by_win[w].append(_curve(arm, wc))
 
         cumulative.sort(key=lambda c: -_final(c))
         months = []
-        for seg in seg_order:
-            curves = by_month[seg]
+        for w in win_order:
+            curves = by_win[w]
             if not curves:
                 continue
             curves.sort(key=lambda c: -_final(c))
-            mkey, mlabel = _segment_label(seg, seg_first[seg])
-            months.append({"key": mkey, "label": mlabel, "series": curves})
+            months.append({"key": w, "label": win_label[w], "series": curves})
         markets.append({"key": key, "label": label,
                         "step_days": SERIES_BETTING_STEP_DAYS,
                         "series": cumulative, "months": months})
@@ -559,9 +587,10 @@ def main() -> None:
                          "leaderboard. Omit to publish the all-months table only."
                          % SCORING_SUBPATH)
     ap.add_argument("--consensus-label", default="Bloomberg ECOS consensus",
-                    help="name of the zero-by-construction reference row "
-                         "(default: %(default)s; an investing_overlay_* must pass "
-                         "'Investing.com consensus')")
+                    help="name of the zero-by-construction reference row (default: "
+                         "%(default)s -- the live months score against the Investing.com "
+                         "calendar consensus, which is Bloomberg-derived and tracks ECOS "
+                         "at 0.997 correlation in surprise units, so it keeps the name)")
     ap.add_argument("--betting-window", default=None,
                     help="override the LiveBetting window caption")
     ap.add_argument("--theme-plots", default=None,
@@ -598,13 +627,8 @@ def main() -> None:
     out = SITE / "data/leaderboard.json"
     data = json.loads(out.read_text())
 
-    if args.overlay.startswith("investing") and "bloomberg" in args.consensus_label.lower():
-        sys.exit("an investing_overlay_* scores against the Investing.com calendar "
-                 "consensus; pass --consensus-label 'Investing.com consensus' so the "
-                 "reference row is not mislabelled.")
-
     csv_path = args.results_root / SCORING_SUBPATH / args.overlay / "bloomberg_final_vs_final_ci.csv"
-    data["headline"]["rows"] = read_scores(csv_path, args.consensus_label, exclude=LATE_ARMS)
+    data["headline"]["rows"] = read_scores(csv_path, args.consensus_label)
     if args.months_dir:
         mpath = (args.results_root / SCORING_SUBPATH / args.months_dir
                  / "final_vs_final_by_month_ci.csv")

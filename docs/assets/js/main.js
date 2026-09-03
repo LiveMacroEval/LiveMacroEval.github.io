@@ -74,16 +74,18 @@ function panelHeader(label) {
 }
 
 /* A strip of tab buttons. `views` is [{key, label}]; `pick` receives the key.
-   Used by the leaderboard (one tab per target month) and the LiveBetting
-   charts (one per betting window). Real buttons with tab roles, so a keyboard
-   reaches them and a screen reader hears which one is selected. */
+   Used by the leaderboard (one tab per target month) and each LiveBetting
+   chart (one per betting window). Real buttons with tab roles, so a keyboard
+   reaches them and a screen reader hears which one is selected. The strip
+   scrolls sideways rather than wrapping, so it stays one line as months
+   accumulate; the first tab (the aggregate) is sticky at the left edge. */
 function tabStrip(mount, views, active, pick) {
   mount.innerHTML = '';
   mount.setAttribute('role', 'tablist');
-  views.forEach(v => {
+  views.forEach((v, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tab';
+    b.className = i === 0 ? 'tab first' : 'tab';
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', v.key === active ? 'true' : 'false');
     b.textContent = v.label;
@@ -103,9 +105,11 @@ function tabStrip(mount, views, active, pick) {
 function renderLeaderboard(h, a) {
   const body = byId('lb-body');
   if (!body) return;
+  // newest month first, after the aggregate, so the current month is one
+  // click away however long the benchmark runs
   const views = [{ key: 'all', label: 'All months', rows: h.rows, window: h.window,
                    note: h.note }]
-    .concat((h.months || []).map(m => ({
+    .concat((h.months || []).slice().reverse().map(m => ({
       key: m.key, label: m.label, rows: m.rows,
       window: `Target month ${m.label}`, note: h.month_note || h.note,
     })));
@@ -458,84 +462,69 @@ const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '%';
 function renderBettingCharts(b) {
   const mount = byId('bet-charts');
   if (!mount || !b || !b.markets) return;
+  mount.innerHTML = '';
 
-  // one tab strip for the section: the union of every market's months, so a
-  // click moves all four charts to the same window. A market with no round
-  // for that month keeps its slot with a note rather than vanishing.
-  const monthLabel = {};
-  b.markets.forEach(m => (m.months || []).forEach(mo => { monthLabel[mo.key] = mo.label; }));
-  // keys are YYYY-MM or YYYY-Qn: lexical order puts the quarter after the months
-  const views = [{ key: 'all', label: 'All months' }]
-    .concat(Object.keys(monthLabel).sort().map(k => ({ key: k, label: monthLabel[k] })));
-  let active = 'all';
-  const tabs = byId('bet-tabs');
+  b.markets.forEach(m => {
+    const fig = document.createElement('figure');
+    fig.className = 'chartfig';
+    // each chart carries its own strip: the markets resolve on different
+    // calendars (GDP is quarterly), so their windows do not line up
+    const strip = document.createElement('div');
+    strip.className = 'tabs';
+    fig.appendChild(strip);
+    const box = document.createElement('div');
+    fig.appendChild(box);
+    const cap = document.createElement('figcaption');
+    fig.appendChild(cap);
+    mount.appendChild(fig);
 
-  // A series keeps its colour across tabs: baselines are numbered by their
-  // order in the cumulative view of that market, and the month views reuse
-  // the map, so the NY Fed is the same blue in Q2 as in the whole run.
-  const colorMaps = b.markets.map(m => {
-    const map = {};
+    // A series keeps its colour across tabs: baselines are numbered by their
+    // order in the cumulative view, and the window views reuse the map, so
+    // the NY Fed is the same blue in Q2 as in the whole run.
+    const colors = {};
     let bi = 0;
     m.series.forEach(s => {
-      map[s.name] = SERIES_COLORS[s.name] || (s.kind === 'human'
+      colors[s.name] = SERIES_COLORS[s.name] || (s.kind === 'human'
         ? BASELINE_COLORS[bi++ % BASELINE_COLORS.length] : 'var(--s-grey)');
     });
-    return map;
-  });
-  const colorFor = (k, s) => colorMaps[k][s.name] || SERIES_COLORS[s.name]
-    || (s.kind === 'human' ? BASELINE_COLORS[0] : 'var(--s-grey)');
+    const colorFor = s => colors[s.name] || SERIES_COLORS[s.name]
+      || (s.kind === 'human' ? BASELINE_COLORS[0] : 'var(--s-grey)');
 
-  function draw() {
-    mount.innerHTML = '';
-    b.markets.forEach((m, k) => {
-      const fig = document.createElement('figure');
-      fig.className = 'chartfig';
-      const box = document.createElement('div');
-      fig.appendChild(box);
-      const cap = document.createElement('figcaption');
-      fig.appendChild(cap);
-      mount.appendChild(fig);
+    const views = [{ key: 'all', label: 'All months', series: m.series,
+                     xLabel: 'Days since nowcasting start',
+                     tail: 'cumulative LiveBetting return, every window end to end.' }]
+      .concat((m.months || []).slice().reverse().map(mo => ({
+        key: mo.key, label: mo.label, series: mo.series,
+        xLabel: `Days since the ${mo.label} window opened`,
+        tail: `LiveBetting return on the ${mo.label} bets alone.`,
+      })));
+    let active = 'all';
 
-      let curves, xLabel, tail;
-      if (active === 'all') {
-        curves = m.series;
-        xLabel = 'Days since nowcasting start';
-        tail = 'cumulative LiveBetting return, every month end to end.';
-      } else {
-        const mo = (m.months || []).find(x => x.key === active);
-        if (!mo) {
-          box.className = 'chartempty';
-          box.textContent = `No Polymarket round on ${m.label} for ${monthLabel[active]}.`;
-          cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(monthLabel[active])}.`;
-          return;
-        }
-        curves = mo.series;
-        xLabel = `Days since the ${mo.label} window opened`;
-        tail = `LiveBetting return on the ${esc(mo.label)} bets alone.`;
-      }
-      cap.innerHTML = `<b>${esc(m.label)}</b> — ${tail}`;
-
-      const series = curves.map(s => ({
-        name: s.name, x0: s.start, values: s.values,
-        dash: s.kind === 'human', color: colorFor(k, s),
-      }));
+    function draw() {
+      const v = views.find(x => x.key === active) || views[0];
+      cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(v.tail)}`;
       lineChart(box, {
-        series, height: 300, yInclude: 0,
+        series: v.series.map(s => ({
+          name: s.name, x0: s.start, values: s.values,
+          dash: s.kind === 'human', color: colorFor(s),
+        })),
+        height: 300, yInclude: 0,
         alt: `LiveBetting return on ${m.label}, by model and baseline`,
-        xLabel,
+        xLabel: v.xLabel,
         fmt: v => pct(v), xfmt: v => '+' + Math.round(v),
         xtipfmt: v => 'Day +' + Math.round(v),
         tipfmt: v => pct(v),
       });
-    });
-  }
-  function pick(key) {
-    active = key;
-    if (tabs) tabStrip(tabs, views, active, pick);
+    }
+    function pick(key) {
+      active = key;
+      tabStrip(strip, views, active, pick);
+      draw();
+    }
+    if (views.length > 1) tabStrip(strip, views, active, pick);
+    else strip.remove();
     draw();
-  }
-  if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
-  draw();
+  });
 }
 
 function renderCaseCharts(c) {
