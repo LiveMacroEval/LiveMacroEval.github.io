@@ -39,7 +39,8 @@ RESULTS = Path(os.environ.get("LIVEMACRO_RESULTS", "/home/ruiyi/livemacro/Result
 
 sys.path.insert(0, str(TOOLS))
 from update_site import (  # noqa: E402
-    BETTING_ANCHOR, BETTING_DROPPED, BETTING_LABELS, BETTING_MARKETS, _window_of,
+    BETTING_ANCHOR, BETTING_CUTOFF, BETTING_DROPPED, BETTING_LABELS, BETTING_MARKETS,
+    _window_of,
 )
 sys.path.insert(0, str(RESULTS / "polymarket_return"))
 from plot_continuous_0831 import make_segments  # noqa: E402  (segment SPEC only)
@@ -145,6 +146,23 @@ def main() -> int:
                     else min(cell["first"], df["datetime_utc"].iloc[0])
                 cell["last"] = df["datetime_utc"].iloc[-1] if cell["last"] is None \
                     else max(cell["last"], df["datetime_utc"].iloc[-1])
+
+        # the cutoff rule, applied to the raw windows: an arm with a cutoff
+        # loses the first window holding a bet at or after it and all later ones
+        for model, cutoff in BETTING_CUTOFF.items():
+            wins = per.get(model)
+            if not wins:
+                continue
+            order = sorted(wins, key=lambda w: win_t0[w])
+            bad = next((i for i, w in enumerate(order)
+                        if wins[w]["last"] >= pd.Timestamp(cutoff)), None)
+            if bad is not None:
+                dropped = order[bad:]
+                for w in dropped:
+                    del wins[w]
+                print(f"  note {label}: {model} loses {dropped} (cutoff {cutoff:%Y-%m-%d})")
+                if not wins:
+                    del per[model]
 
         sm = site_markets.get(key)
         check(sm is not None, f"{label}: published")

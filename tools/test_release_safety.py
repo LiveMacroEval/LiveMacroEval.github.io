@@ -242,18 +242,18 @@ def m_series_too_many_months(d: Path):
     _write_series(d, o)
 
 def m_month_row_extra_field(d: Path):
-    """leaderboard.json: a raw value added to a month tab's model row."""
+    """leaderboard.json: a raw value added to a period tab's model row."""
     p = d / "data/leaderboard.json"
     j = json.loads(p.read_text())
-    j["headline"]["months"][0]["rows"][1]["raw_surprise"] = 0.42
+    j["headline"]["periods"][0]["rows"][1]["raw_surprise"] = 0.42
     p.write_text(json.dumps(j))
 
 def m_month_panels_per_release(d: Path):
-    """leaderboard.json: a 'month' tab per release is a per-release table."""
+    """leaderboard.json: a 'period' tab per release is a per-release table."""
     p = d / "data/leaderboard.json"
     j = json.loads(p.read_text())
-    row = j["headline"]["months"][0]["rows"][1]
-    j["headline"]["months"] = [
+    row = j["headline"]["periods"][0]["rows"][1]
+    j["headline"]["periods"] = [
         {"key": f"r{i}", "label": f"release {i}", "rows": [dict(row, score=0.001 * i)]}
         for i in range(200)]
     p.write_text(json.dumps(j))
@@ -294,8 +294,8 @@ CASES = [
     ("series.json: per-bet detail in a month curve", m_series_month_extra_key, "unexpected key"),
     ("series.json: prices smuggled into a month block", m_series_month_block_extra_key, "unexpected key"),
     ("series.json: a month tab per resolution",    m_series_too_many_months, "months exceeds"),
-    ("leaderboard.json: raw value in a month row", m_month_row_extra_field, "unknown key"),
-    ("leaderboard.json: a month tab per release",  m_month_panels_per_release, "exceeds the 30 cap"),
+    ("leaderboard.json: raw value in a period row", m_month_row_extra_field, "unknown key"),
+    ("leaderboard.json: a period tab per release", m_month_panels_per_release, "exceeds the 30 cap"),
 ]
 
 

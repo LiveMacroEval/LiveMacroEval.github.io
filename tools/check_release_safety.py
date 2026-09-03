@@ -87,10 +87,11 @@ IMAGE_MAGIC = {
 # --------------------------------------------------------------------------
 MAX_JSON_BYTES = 32 * 1024
 MAX_ARRAY_LEN = 30        # a per-release or hourly series is far longer
-# One row per model per PANEL. The month tabs (2026-09-03) add a panel per
-# target month -- nine so far, each <= 8 rows of score + CI pair + count -- so
-# the real file holds ~330 numbers. Still one row per model, never one per
-# release: a release-level dump would need thousands.
+# One row per model per PANEL. The period tabs (2026-09-03) add a panel per
+# quarter -- four so far, each <= 8 rows of score + CI pair + count -- so the
+# real file holds ~180 numbers (the cap was sized when the tabs were monthly).
+# Still one row per model, never one per release: a release-level dump would
+# need thousands.
 MAX_NUMERIC_LITERALS = 500
 
 # --------------------------------------------------------------------------
@@ -130,9 +131,10 @@ N = (int, float)
 
 ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events": "int_or_null",
        "note?": S}
-# Agent-design rows render in the same table as the headline rows, so they
-# carry the same "kind" badge. They have no CI or event count of their own.
-AGENT_ROW = {"name": S, "score": N, "kind?": S, "best?": bool, "note?": S}
+# Agent-design rows: one configuration each, naming the arm it is, on one
+# coverage-matched event set. No CI of their own.
+AGENT_ROW = {"name": S, "score": N, "kind?": S, "best?": bool, "note?": S,
+             "model?": S, "events?": "int_or_null"}
 # One aggregate LiveMacro Score per model per theme -- 4 numbers a row, the same
 # shape as the paper's Figure 3 panels. No per-release value can ride along.
 THEME_ROW = {"name": S, "kind": S, "scores": [N]}
@@ -140,15 +142,16 @@ THEME_ROW = {"name": S, "kind": S, "scores": [N]}
 # behind it (>1,400 points per window) stays in the private checkout; only its
 # last value is published.
 BET_ROW = {"name": S, "kind": S, "ret": N, "note?": S}
-# A month tab: the headline table restricted to one target month's releases.
-# Same row shape, so nothing finer than a per-model aggregate can appear.
-MONTH_PANEL = {"key": S, "label": S, "rows": [ROW]}
+# A period tab (a quarter): the headline table restricted to the releases of
+# that period. Same row shape, so nothing finer than a per-model aggregate can
+# appear; `covers` and `current` caption a quarter still in progress.
+PERIOD_PANEL = {"key": S, "label": S, "rows": [ROW], "covers?": S, "current?": bool}
 SCHEMA = {
     "_comment?": S,
     "last_updated": "date",
     "next_update": "date",
-    "headline": {"title": S, "window": S, "note": S, "month_note?": S, "source": S,
-                 "rows": [ROW], "months?": [MONTH_PANEL]},
+    "headline": {"title": S, "window": S, "note": S, "period_note?": S, "source": S,
+                 "rows": [ROW], "periods?": [PERIOD_PANEL]},
     "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW]},
     "themes": {"title": S, "window": S, "note": S,
                "columns": [S], "rows": [THEME_ROW]},
@@ -471,8 +474,8 @@ def check_leaderboard() -> None:
         fail(f"data/leaderboard.json 'source' leaks a filesystem path: {src!r}")
 
     rows = d.get("headline", {}).get("rows", [])
-    n_months = len(d.get("headline", {}).get("months", []))
-    notes.append(f"leaderboard.json: {len(rows)} model rows, {n_months} month tabs, "
+    n_months = len(d.get("headline", {}).get("periods", []))
+    notes.append(f"leaderboard.json: {len(rows)} model rows, {n_months} period tabs, "
                  f"{n} numeric literals, {len(raw):,} bytes -- all within caps")
 
 

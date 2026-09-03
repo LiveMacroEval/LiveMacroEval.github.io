@@ -26,16 +26,16 @@ Usage
     . /home/ruiyi/anaconda3/bin/activate && conda activate livemacro
     python tools/update_site.py --dry-run
     python tools/update_site.py \
-        --overlay investing_overlay_0825 --months-dir investing_overlay_0825_by_month \
+        --overlay investing_overlay_0825 --periods-dir investing_overlay_0825_by_quarter \
         --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
-        --betting-dir continuous_returns_20260831 \
+        --betting-dir continuous_returns_20260831_with_qwen \
         --window "Target reference periods Nov 2025 - Jul 2026" \
         --last-updated 2026-08-25
 
-The month tabs on the site read `--months-dir`, the by-month sibling of the
-overlay written by score_by_month_<MMDD>.py in the private checkout, and the
-`months` blocks in series.json, derived here from the same continuous-returns
-CSVs as the cumulative curves.
+The leaderboard's quarter tabs read `--periods-dir`, the by-period sibling of
+the overlay written by score_by_period_<MMDD>.py in the private checkout. The
+betting charts' month tabs are the `months` blocks in series.json, derived
+here from the same continuous-returns CSVs as the cumulative curves.
 """
 from __future__ import annotations
 
@@ -158,13 +158,24 @@ BETTING_LABELS = {
     "fed-forecast": "Cleveland Fed Nowcast",
     "fed-nowcast": "Chicago Fed CHURN",
 }
-# Both Qwen arms are off the LiveBetting charts (project decision 2026-08-31):
-# a synchronised regime break in their job on 2026-07-05 left them in the
-# open-ended June CPI bucket, and the +2771% that produced says nothing about
-# nowcasting. They stay in every score table. The 0831 continuous-returns run
-# already omits them; this is belt and braces for a later run that does not.
-# Both Claude Code arms ARE drawn (the 0831 run includes them on purpose).
-BETTING_DROPPED = {"qwen3-235b-a22b-instruct-2507", "qwen3-next-80b-a3b-instruct"}
+# Arms never drawn on the LiveBetting charts. Empty: both Claude Code arms are
+# drawn, and the Qwen arms are handled by the cutoff below rather than dropped.
+BETTING_DROPPED: set[str] = set()
+
+# Both Qwen arms changed regime on 2026-07-05 -- a synchronised upstream change
+# to their job (HAZARD 2 in the private UPDATE_PIPELINE.md) that moved every
+# indicator at once. Bets from that date on are not a nowcasting signal: the
+# June CPI window returned +2771% from an open-ended bucket, July unemployment
+# +569%. So for these arms a window holding ANY bet on or after the cutoff is
+# dropped, together with every later window, and the arm's cumulative curve
+# ends with its last clean window. Earlier windows stay (user decision
+# 2026-09-03: keep the past months, drop only the broken ones). The betting
+# run must therefore INCLUDE Qwen (`plot_continuous_0831.py --include-qwen`);
+# note that puts Qwen back into the Feb shared start, which it binds.
+BETTING_CUTOFF = {
+    "qwen3-235b-a22b-instruct-2507": dt.datetime(2026, 7, 5),
+    "qwen3-next-80b-a3b-instruct": dt.datetime(2026, 7, 5),
+}
 
 
 def _is_human(arm: str) -> bool:
@@ -203,32 +214,12 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 
 
 def read_betting(betting_dir: Path) -> list[dict]:
-    """Final cumulative return per arm, per market. Aggregates only."""
-    markets = []
-    for key, label in BETTING_MARKETS:
-        path = betting_dir / f"continuous_returns_{key}_{BETTING_ANCHOR}.csv"
-        if not path.exists():
-            print(f"  ! no continuous-returns CSV for {key} in {betting_dir.name}; "
-                  "market skipped")
-            continue
-        # Keep only the last point of each arm's stitched series.
-        last: dict[str, tuple] = {}
-        with path.open() as fh:
-            for r in csv.DictReader(fh):
-                arm = r["model"]
-                if arm in BETTING_DROPPED:
-                    continue
-                x = float(r["stitched_x_days"])
-                if arm not in last or x > last[arm][0]:
-                    last[arm] = (x, float(r["cumulative_return_pct"]))
-        rows = [{
-            "name": BETTING_LABELS.get(arm, arm),
-            "kind": "human" if _is_human(arm) else "llm",
-            "ret": round(val, 1) or 0.0,   # a rounded -0.0 reads as plain 0.0
-        } for arm, (_x, val) in last.items()]
-        rows.sort(key=lambda r: -r["ret"])
-        markets.append({"label": label, "rows": rows})
-    return markets
+    """Final cumulative return per arm, per market: the last point of each
+    published cumulative curve, so the table and the chart cannot disagree."""
+    return [{"label": m["label"],
+             "rows": [{"name": c["name"], "kind": c["kind"], "ret": _final(c)}
+                      for c in m["series"]]}
+            for m in read_betting_series(betting_dir)]
 
 
 # ---------------------------------------------------------------- series ----
@@ -359,6 +350,25 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                 float(r["cumulative_profit"]), float(r["cumulative_invested"]),
                 float(r["cumulative_return_pct"]), ts,
             ))
+        # an arm with a cutoff loses the first window holding a bet at or
+        # after it, and every window after that (the window is read off the
+        # row's own timestamp, so no other arm's rows are needed)
+        for arm, cutoff in BETTING_CUTOFF.items():
+            rows = rows_by_arm.get(arm)
+            if not rows:
+                continue
+            rows.sort(key=lambda t: t[0])
+            wins = [_window_of(key, seg, ts)[0] for _x, seg, _p, _i, _r, ts in rows]
+            bad = next((i for i, (row, w) in enumerate(zip(rows, wins))
+                        if row[5] >= cutoff), None)
+            if bad is not None:
+                first_bad = wins[bad]
+                keep = [r for r, w in zip(rows, wins)
+                        if wins.index(w) < wins.index(first_bad)]
+                if keep:
+                    rows_by_arm[arm] = keep
+                else:
+                    del rows_by_arm[arm]
         # segments in chart order, each mapped to its tab window; a window
         # opens at the earliest kept bet any arm places in it
         seg_lo: dict[str, float] = {}
@@ -538,16 +548,47 @@ def read_scores(csv_path: Path, consensus_label: str,
     return rows
 
 
-def read_month_scores(csv_path: Path, consensus_label: str) -> list[dict]:
-    """One leaderboard panel per target month, from the by-month sibling of the
-    overlay (score_by_month_<MMDD>.py). Same columns and rounding as the
-    headline; each panel is the same statistic on that month's releases."""
+def _period_label(key: str) -> str:
+    """'2026-Q1' -> 'Q1 2026'; '2026-03' -> 'Mar 2026'."""
+    y, rest = key.split("-", 1)
+    if rest.startswith("Q"):
+        return f"{rest} {y}"
+    return f"{MONTH_NAMES[int(rest) - 1]} {y}"
+
+
+def _months_span(months: list[str]) -> str:
+    """['2025-11', '2025-12'] -> 'Nov–Dec 2025'; ['2026-07'] -> 'Jul 2026'."""
+    if not months:
+        return ""
+    def name(m):
+        return MONTH_NAMES[int(m.split("-")[1]) - 1]
+    y0, y1 = months[0].split("-")[0], months[-1].split("-")[0]
+    if len(months) == 1:
+        return f"{name(months[0])} {y0}"
+    if y0 == y1:
+        return f"{name(months[0])}–{name(months[-1])} {y0}"
+    return f"{name(months[0])} {y0}–{name(months[-1])} {y1}"
+
+
+def read_period_scores(period_dir: Path, consensus_label: str) -> list[dict]:
+    """One leaderboard panel per period (quarters on the site), from the
+    by-period sibling of the overlay (score_by_period_<MMDD>.py). Same columns
+    and rounding as the headline; each panel is the same statistic on the
+    releases whose reference month falls in that period. The newest panel is
+    flagged as the quarter in progress when it does not yet hold three months,
+    and any short panel says which months it covers."""
+    meta_path = period_dir / "metadata.json"
+    if not meta_path.exists():
+        sys.exit(f"by-period metadata not found:\n  {meta_path}\n"
+                 "Run score_by_period_<MMDD>.py in the private checkout first, "
+                 "or drop --periods-dir.")
+    meta = json.loads(meta_path.read_text())
+    group = meta.get("group", "quarter")
+    csv_path = period_dir / f"final_vs_final_by_{group}_ci.csv"
     if not csv_path.exists():
-        sys.exit(f"by-month CSV not found:\n  {csv_path}\n"
-                 "Run score_by_month_<MMDD>.py in the private checkout first, "
-                 "or drop --months-dir.")
-    need = ("model", "month") + COLS[1:]
-    by_month: dict[str, list[dict]] = {}
+        sys.exit(f"by-period CSV not found:\n  {csv_path}")
+    need = ("model", "period") + COLS[1:]
+    by_period: dict[str, list[dict]] = {}
     with csv_path.open() as fh:
         reader = csv.DictReader(fh)
         missing = [c for c in need if c not in (reader.fieldnames or [])]
@@ -556,17 +597,24 @@ def read_month_scores(csv_path: Path, consensus_label: str) -> list[dict]:
         for r in reader:
             if r["model"] in DROPPED:
                 continue
-            by_month.setdefault(r["month"], []).append(_score_row(r))
+            by_period.setdefault(r["period"], []).append(_score_row(r))
 
+    months_of = {p["key"]: p["months"] for p in meta.get("periods", [])}
+    keys = sorted(by_period)
     panels = []
-    for month in sorted(by_month):
-        rows = by_month[month]
+    for i, key in enumerate(keys):
+        rows = by_period[key]
         rows.sort(key=lambda x: -x["score"])
-        rows[0]["note"] = "leads the month"
+        rows[0]["note"] = f"leads the {group}"
         rows.insert(0, _consensus_row(consensus_label))
-        y, m = month.split("-")
-        panels.append({"key": month, "label": f"{MONTH_NAMES[int(m) - 1]} {y}",
-                       "rows": rows})
+        panel = {"key": key, "label": _period_label(key), "rows": rows}
+        months = months_of.get(key, [])
+        newest = i == len(keys) - 1
+        if group == "quarter" and months and (newest or len(months) < 3):
+            panel["covers"] = _months_span(months) + (" so far" if newest and len(months) < 3 else "")
+        if newest and (group != "quarter" or len(months) < 3):
+            panel["current"] = True
+        panels.append(panel)
     return panels
 
 
@@ -581,10 +629,10 @@ def main() -> None:
     ap.add_argument("--overlay", default="bloomberg_overlay",
                     help="overlay dir under %s (default: %%(default)s)" % SCORING_SUBPATH)
     ap.add_argument("--window", default=None, help="override the headline window caption")
-    ap.add_argument("--months-dir", default=None,
-                    help="by-month sibling of the overlay under %s, written by "
-                         "score_by_month_<MMDD>.py; adds the month tabs to the "
-                         "leaderboard. Omit to publish the all-months table only."
+    ap.add_argument("--periods-dir", default=None,
+                    help="by-period sibling of the overlay under %s, written by "
+                         "score_by_period_<MMDD>.py; adds the quarter tabs to the "
+                         "leaderboard. Omit to publish the all-quarters table only."
                          % SCORING_SUBPATH)
     ap.add_argument("--consensus-label", default="Bloomberg ECOS consensus",
                     help="name of the zero-by-construction reference row (default: "
@@ -629,12 +677,12 @@ def main() -> None:
 
     csv_path = args.results_root / SCORING_SUBPATH / args.overlay / "bloomberg_final_vs_final_ci.csv"
     data["headline"]["rows"] = read_scores(csv_path, args.consensus_label)
-    if args.months_dir:
-        mpath = (args.results_root / SCORING_SUBPATH / args.months_dir
-                 / "final_vs_final_by_month_ci.csv")
-        data["headline"]["months"] = read_month_scores(mpath, args.consensus_label)
+    data["headline"].pop("months", None)   # the pre-quarter key, never published again
+    if args.periods_dir:
+        data["headline"]["periods"] = read_period_scores(
+            args.results_root / SCORING_SUBPATH / args.periods_dir, args.consensus_label)
     else:
-        data["headline"].pop("months", None)
+        data["headline"].pop("periods", None)
     # Record the overlay by name only. The absolute private path stays out of the
     # published JSON.
     data["headline"]["source"] = f"{SCORING_SUBPATH}/{args.overlay}/ (not redistributed)"

@@ -257,9 +257,10 @@
 <section id="leaderboard">
   <div class="wrap">
     <h2>Leaderboard: LiveMacro Score</h2>
-    <p>The all-months view is the running score since the benchmark went live. Each month tab
-      scores only that month's releases, so it is noisier, and the ranking moves from month to
-      month. That is the point of a live benchmark: a single window is a sample, not a verdict.</p>
+    <p>The all-quarters view is the running score since the benchmark went live. Each quarter
+      tab scores only the releases whose reference month falls in that quarter, so it is noisier,
+      and the ranking moves from quarter to quarter. The newest tab is the quarter in progress
+      and says which months it holds so far.</p>
     <div class="tabs" id="lb-tabs"></div>
     <div class="tablewrap">
       <table>
@@ -275,14 +276,35 @@
   </div>
 </section>
 
+<section id="agents">
+  <div class="wrap">
+    <h2>Tool and agent design</h2>
+    <p>One base model, three ways of running it: a plain prompt, the same prompt with a
+      financial-data plug-in, and a multi-agent team. Scored on one coverage-matched set of
+      releases, so the rows are comparable with each other, not with the leaderboard above.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th style="width:44px">#</th><th>Configuration</th>
+          <th class="num">LiveMacro</th><th class="num">Events</th>
+          <th class="barcell">vs. consensus</th>
+        </tr></thead>
+        <tbody id="ad-body"><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="ad-note">—</p>
+  </div>
+</section>
+
 <section id="betting">
   <div class="wrap">
     <h2>Real-time return: LiveBetting Score</h2>
-    <p>Across the months since the paper window closed, the institutional nowcasts lead every market
-      that has one. On real GDP the two frontier agents still finish the window ahead of break-even and
-      above the Atlanta Fed; on CPI, the unemployment rate and payrolls every agent finishes in the
-      red, a real limit on indicators where institutional models are tuned to known economic
-      structure.</p>
+    <p>Across the months since the paper window closed, the institutional nowcasts lead the frontier
+      agents on every market that has one. On real GDP the two frontier agents still finish the
+      window ahead of break-even and above the Atlanta Fed; on CPI, the unemployment rate and
+      payrolls they finish in the red, a real limit on indicators where institutional models are
+      tuned to known economic structure. The Qwen curves stop at their last window before the July
+      2026 change to their job.</p>
     <p>The all-months view stitches each window end to end and carries the bankroll across them.
       A month tab (a quarter, for GDP) re-bases at the start of that window, so it shows the return
       on that window's bets alone; single windows swing far more than the cumulative curve does.</p>
@@ -356,6 +378,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903b"></script>
+<script src="assets/js/main.js?v=20260903c"></script>
 </body>
 </html>

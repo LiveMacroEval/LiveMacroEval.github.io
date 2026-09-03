@@ -119,21 +119,24 @@ board scores every month against the Investing.com calendar consensus
 0.997 correlation in surprise units, so the site keeps calling the reference
 row Bloomberg (user decision 2026-09-03).
 
-### The month tabs (added 2026-09-03)
+### The period tabs (added 2026-09-03)
 
-The leaderboard and the LiveBetting charts each carry an "All months" view plus
-one tab per target month. Two inputs feed them:
+The leaderboard carries an "All quarters" view plus one tab per quarter; each
+LiveBetting chart carries "All months" plus one tab per betting window. Two
+inputs feed them:
 
-- **Scores.** `score_by_month_<MMDD>.py` in the private
-  `step_15_4_live_scoring/` writes `investing_overlay_<MMDD>_by_month/`, the
-  headline statistic and its bootstrap CI restricted to each month's releases.
-  The unit is the release EVENT, never split: advance GDP counts in the last
-  month of its quarter, and an event whose fields carry two reference months
-  goes whole to the month most of its fields belong to. The script asserts
-  that the months partition the headline (counts add up, union reproduces
-  it), and `validate_by_month_<MMDD>.py` re-derives every row with no
-  pipeline imports. Pass the directory as `--months-dir`; omit the flag to
-  publish the all-months table only.
+- **Scores.** `score_by_period_<MMDD>.py` in the private
+  `step_15_4_live_scoring/` writes `investing_overlay_<MMDD>_by_quarter/`
+  (or `_by_month/` with `--group month`), the headline statistic and its
+  bootstrap CI restricted to each period's releases. The unit is the release
+  EVENT, never split: advance GDP counts in the last month of its quarter,
+  and an event whose fields fall in two periods goes whole to the period most
+  of its fields belong to. The script asserts that the periods partition the
+  headline (counts add up, union reproduces it), and
+  `validate_by_period_<MMDD>.py` re-derives every row with no pipeline
+  imports. Pass the directory as `--periods-dir`; omit the flag to publish
+  the all-quarters table only. The newest quarter is flagged as in progress
+  and captioned with the months it holds so far.
 - **Betting curves.** Derived here from the same continuous-returns CSVs as
   the cumulative curves: each window (a month, or a quarter on the GDP
   market) is re-based at its start, so a tab shows the return on that
@@ -145,17 +148,24 @@ The full 2026-08-25 refresh command:
 
 ```bash
 python tools/update_site.py \
-  --overlay investing_overlay_0825 --months-dir investing_overlay_0825_by_month \
+  --overlay investing_overlay_0825 --periods-dir investing_overlay_0825_by_quarter \
   --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
-  --betting-dir continuous_returns_20260831 \
+  --betting-dir continuous_returns_20260831_with_qwen \
   --window "Target reference periods Nov 2025 – Jul 2026 (official releases Dec 1, 2025 – Aug 18, 2026)" \
   --betting-window "Target windows Feb – Jul 2026; Q2 2026 for real GDP." \
   --last-updated 2026-08-25 --skip-figures
 ```
 
-Both Qwen arms (`BETTING_DROPPED`) are off the betting charts after their
-July 2026 regime break, while staying in every score table. The arms that
-went live in June 2026 appear everywhere they have data.
+Both Qwen arms changed regime on 2026-07-05, so `BETTING_CUTOFF` drops, for
+each of them, the first betting window holding a bet from that date on and
+every later window; earlier windows and the score tables keep them. The
+betting run must therefore include Qwen
+(`plot_continuous_0831.py --include-qwen --output-dir
+continuous_returns_20260831_with_qwen`), which also puts Qwen back into the
+February shared start that it binds. The arms that went live in June 2026
+appear everywhere they have data. The tool-and-agent-design comparison is its
+own table (`agent_design` in the JSON, hand-maintained from the private
+`matched_new_arms_bmsc.csv`), each row naming the arm it is.
 
 ### Adding a model arm
 

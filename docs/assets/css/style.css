@@ -353,6 +353,7 @@ footer .sep { color: var(--border); padding: 0 4px; }
   --s-olive:   #6b8a4a;
   --s-brown:   #a37c52;
   --s-grey:    #868d99;
+  --s-rose:    #b5567a;   /* the Claude Code agent arm: purple/slate are Qwen's */
   --grid: #e6e9ee;
 }
 @media (prefers-color-scheme: dark) {
@@ -365,6 +366,7 @@ footer .sep { color: var(--border); padding: 0 4px; }
     --s-olive:   #9cbb72;
     --s-brown:   #c9a179;
     --s-grey:    #9aa1ad;
+    --s-rose:    #d489a8;
     --grid: #2a2f38;
   }
 }

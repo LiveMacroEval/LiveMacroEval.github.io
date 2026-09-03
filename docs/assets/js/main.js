@@ -94,35 +94,33 @@ function tabStrip(mount, views, active, pick) {
   });
 }
 
-/* The headline evaluation and the agent-design experiment render as two
-   panels of a single table. They share the metric and the bar scale, but not
-   the window or the consensus source -- hence the panel captions.
+/* Caption for a period panel: the quarter, and for a short or in-progress
+   quarter which months it actually holds. */
+function periodHeader(p) {
+  let t = p.current ? `Current quarter ${p.label}` : `Target quarter ${p.label}`;
+  if (p.covers) t += ` — ${p.covers}`;
+  return t;
+}
 
-   The headline panel is tabbed: "All months" is the running score, and each
-   month tab is the same statistic on that month's releases only. The
-   agent-design panel is a separate, coverage-matched comparison, so it stays
-   put underneath whichever tab is open. */
-function renderLeaderboard(h, a) {
+/* The leaderboard is tabbed: "All quarters" is the running score, and each
+   quarter tab is the same statistic on that quarter's releases only, newest
+   first so the quarter in progress is one click away. */
+function renderLeaderboard(h) {
   const body = byId('lb-body');
   if (!body) return;
-  // newest month first, after the aggregate, so the current month is one
-  // click away however long the benchmark runs
-  const views = [{ key: 'all', label: 'All months', rows: h.rows, window: h.window,
+  const views = [{ key: 'all', label: 'All quarters', rows: h.rows, window: h.window,
                    note: h.note }]
-    .concat((h.months || []).slice().reverse().map(m => ({
-      key: m.key, label: m.label, rows: m.rows,
-      window: `Target month ${m.label}`, note: h.month_note || h.note,
+    .concat((h.periods || []).slice().reverse().map(p => ({
+      key: p.key, label: p.current ? `${p.label} · so far` : p.label, rows: p.rows,
+      window: periodHeader(p), note: h.period_note || h.note,
     })));
   let active = 'all';
   const tabs = byId('lb-tabs');
 
   function draw() {
     const v = views.find(x => x.key === active) || views[0];
-    const all = [...v.rows.map(r => r.score), ...a.rows.map(r => r.score)];
-    const max = Math.max(...all.map(Math.abs)) || 1;
-    const html = [];
-
-    html.push(panelHeader(v.window));
+    const max = Math.max(...v.rows.map(r => Math.abs(r.score))) || 1;
+    const html = [panelHeader(v.window)];
     const llm = v.rows.filter(x => x.kind === 'llm').map(x => x.score);
     const bestH = llm.length ? Math.max(...llm) : NaN;
     let rank = 0;
@@ -131,18 +129,9 @@ function renderLeaderboard(h, a) {
       if (!isRef) rank++;
       html.push(leaderRow(r, rank, isRef, r.kind === 'llm' && r.score === bestH, max));
     }
-
-    html.push(panelHeader(`${a.title} — ${a.window}`));
-    rank = 0;
-    for (const r of a.rows) {
-      const isRef = r.kind === 'human';
-      if (!isRef) rank++;
-      html.push(leaderRow(r, rank, isRef, !!r.best, max));
-    }
-
     body.innerHTML = html.join('');
     const note = byId('lb-note');
-    if (note) note.textContent = `${v.note} ${a.note}`;
+    if (note) note.textContent = v.note;
   }
   function pick(key) {
     active = key;
@@ -151,6 +140,39 @@ function renderLeaderboard(h, a) {
   }
   if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
   draw();
+}
+
+/* Tool and agent design: its own table. One row per configuration, each
+   naming the arm it is; no CI column, since these rows carry none. The bar
+   scale is its own -- the panel is a coverage-matched comparison among its
+   three rows, not against the leaderboard. */
+function agentRow(r, rank, isRef, isLead, max) {
+  const kindLabel = { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || '';
+  const sub = r.model || r.note;
+  return `<tr class="${isRef ? 'ref' : isLead ? 'lead' : ''}">
+    <td class="rank">${isRef ? '—' : rank}</td>
+    <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${kindLabel}</span>
+        ${sub ? `<span class="rownote">${esc(sub)}</span>` : ''}</td>
+    <td class="num">${scoreCell(r.score)}</td>
+    <td class="num ci">${r.events ?? '—'}</td>
+    <td class="barcell">${bar(r.score, max)}</td>
+  </tr>`;
+}
+
+function renderAgentDesign(a) {
+  const body = byId('ad-body');
+  if (!body || !a) return;
+  const max = Math.max(...a.rows.map(r => Math.abs(r.score))) || 1;
+  const html = [`<tr class="grouphdr"><td colspan="5">${esc(a.window)}</td></tr>`];
+  let rank = 0;
+  for (const r of a.rows) {
+    const isRef = r.kind === 'human';
+    if (!isRef) rank++;
+    html.push(agentRow(r, rank, isRef, !!r.best, max));
+  }
+  body.innerHTML = html.join('');
+  const note = byId('ad-note');
+  if (note) note.textContent = a.note;
 }
 
 /* Models down the side, themes across the top. */
@@ -193,7 +215,8 @@ fetch('data/leaderboard.json?v=' + Date.now())
     const lu = byId('last-updated'), nu = byId('next-update');
     if (lu) lu.textContent = fmtDate(d.last_updated);
     if (nu) nu.textContent = fmtDate(d.next_update);
-    renderLeaderboard(d.headline, d.agent_design);
+    renderLeaderboard(d.headline);
+    renderAgentDesign(d.agent_design);
     renderThemes(d.themes);
     renderIndicators(d.indicators);
     renderFed(d.comparators.fed);
@@ -226,8 +249,8 @@ const SERIES_COLORS = {
   'Claude Code multi-agent': 'var(--s-gold)',
   'GPT-5 (reasoned)': 'var(--s-teal-lt)',
   // the pipeline draws this arm in a pale apricot that has no contrast on
-  // white; purple is free now that Qwen is off the betting charts
-  'Claude Code agent': 'var(--s-purple)',
+  // white, and purple and slate are Qwen's, which shares these charts
+  'Claude Code agent': 'var(--s-rose)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 
