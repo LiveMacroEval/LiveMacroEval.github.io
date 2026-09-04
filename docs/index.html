@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LiveMacroEval — A Live Benchmark for LLM Macroeconomic Nowcasting</title>
-<meta name="description" content="LiveMacroEval is a live, contamination-resistant benchmark in which LLM agents produce hourly nowcasts for sixteen major U.S. macroeconomic indicators, scored against equity-market reactions and prediction-market returns.">
+<meta name="description" content="LiveMacroEval is a live, contamination-resistant benchmark in which LLM agents produce hourly nowcasts for sixteen major U.S. macroeconomic indicators, scored against equity-market reactions and Polymarket returns.">
 <meta property="og:title" content="LiveMacroEval">
 <meta property="og:description" content="Can LLMs take the pulse of the economy? A live benchmark for LLM macroeconomic nowcasting.">
 <meta property="og:type" content="website">
@@ -178,7 +178,7 @@
 <text class="f1-sans f1-note" font-size="11" font-style="italic" text-anchor="middle"><tspan x="630.53" y="283.99">· Rolling estimates near release</tspan></text>
 </svg>
       <figcaption>LLM agents nowcast sixteen U.S. macro indicators in real time. We score them
-        against the equity market, prediction markets, and professional economists.</figcaption>
+        against the equity market, <b class="hl">Polymarket</b>, and professional economists.</figcaption>
     </figure>
   </div>
 </header>
@@ -218,11 +218,12 @@
       </div>
       <div class="card">
         <span class="tag">Consensus &amp; econometrics</span>
-        <h4>Bloomberg ECOS and auto-ARIMA</h4>
-        <p class="cardp"><a href="https://www.bloomberg.com/professional/products/data/economic-data/">Bloomberg
+        <h4>Bloomberg ECOS and ARIMA</h4>
+        <p class="cardp"><a href="https://data.bloomberglp.com/professional/sites/10/Fact_Sheet_-_Economist_Estimates.pdf">Bloomberg
           ECOS</a> is the professional economist consensus, covering all sixteen indicators, and it is
-          famously hard to beat. auto-ARIMA is a univariate time-series baseline, refit at the start
-          of every window.</p>
+          famously hard to beat.</p>
+        <p class="cardp">ARIMA is a univariate time-series baseline, refit at the start of every
+          window.</p>
       </div>
     </div>
   </div>
@@ -238,14 +239,13 @@
         <span class="tag">Metric 1</span>
         <h4>LiveMacro Score</h4>
         <p class="cardp">Macro surprises move equity prices. We weight each indicator by its measured
-          effect on S&amp;P 500 futures at the moment of release, so sixteen accuracies collapse into
-          one comparable number. <b>+1</b> is perfect, <b>0</b> ties the consensus, <b>−1</b> is
+          effect on S&amp;P 500 futures at the moment of release, so <b class="hl">sixteen accuracies collapse into one comparable number</b>. <b>+1</b> is perfect, <b>0</b> ties the consensus, <b>−1</b> is
           arbitrarily worse.</p>
       </div>
       <div class="card">
         <span class="tag">Metric 2</span>
         <h4>LiveBetting Score</h4>
-        <p class="cardp">Every hour before a release we bet $1 on the prediction-market bucket holding
+        <p class="cardp">Every hour before a release we bet $1 on the <b class="hl">Polymarket</b> bucket holding
           the agent's latest nowcast. Prices are the crowd's own odds, so liquidity is priced in:
           beating a confident crowd pays a lot, agreeing with it pays little. The score is unit-free,
           so it aggregates across very different indicators.</p>
@@ -371,14 +371,13 @@
 <footer>
   <div class="wrap">
     LiveMacroEval <span class="sep">·</span>
-    <a href="https://fintech.gatech.edu/#/">Georgia Tech FinTech Lab</a> <span class="sep">·</span>
     <a href="https://github.com/LiveMacroEval/LiveMacroEval">GitHub</a> <span class="sep">·</span>
-    Refreshed monthly
+    <a href="https://fintech.gatech.edu/#/">Georgia Tech Financial Services Innovation Lab</a>
   </div>
 </footer>
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903e"></script>
+<script src="assets/js/main.js?v=20260903f"></script>
 </body>
 </html>

@@ -208,6 +208,8 @@ h3::after {
 .card li { margin-bottom: 5px; }
 .card .tag { font-size: 12px; color: var(--accent-ink); }
 .card .cardp { font-size: 15.5px; color: var(--fg); line-height: 1.62; margin: 0; }
+/* a card with two paragraphs (the consensus and ARIMA baselines) keeps a gap between them */
+.card .cardp + .cardp { margin-top: 10px; }
 
 /* ---------- tables ---------- */
 .tablewrap {

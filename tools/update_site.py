@@ -66,7 +66,7 @@ MODEL_LABELS = {
     "claude-sonnet-4.5-api": "Claude-4.5-Sonnet",
     "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
-    "arima_aic": "auto-ARIMA",
+    "arima_aic": "ARIMA",
     "claude-code-agent": "Claude Code agent",
     "claude-code-multiagent": "Claude Code multi-agent",
     "gpt-5-search-api-reasoned": "GPT-5 (reasoned)",

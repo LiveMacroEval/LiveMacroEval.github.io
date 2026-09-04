@@ -67,7 +67,7 @@
         "note": ""
       },
       {
-        "name": "auto-ARIMA",
+        "name": "ARIMA",
         "kind": "econ",
         "score": -0.19,
         "ci": [
@@ -100,7 +100,7 @@
             "note": "leads the quarter"
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "score": -0.064,
             "ci": [
@@ -174,7 +174,7 @@
             "note": ""
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "score": -0.136,
             "ci": [
@@ -247,7 +247,7 @@
             "note": ""
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "score": -0.324,
             "ci": [
@@ -280,7 +280,7 @@
             "note": "leads the quarter"
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "score": -0.022,
             "ci": [
@@ -388,7 +388,7 @@
         ]
       },
       {
-        "name": "auto-ARIMA",
+        "name": "ARIMA",
         "kind": "econ",
         "scores": [
           -0.011,
@@ -424,7 +424,7 @@
             ]
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "scores": [
               0.065,
@@ -491,7 +491,7 @@
             ]
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "scores": [
               0.007,
@@ -547,7 +547,7 @@
             ]
           },
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "scores": [
               -0.043,
@@ -563,7 +563,7 @@
         "label": "Q3 2026",
         "rows": [
           {
-            "name": "auto-ARIMA",
+            "name": "ARIMA",
             "kind": "econ",
             "scores": [
               -0.217,
