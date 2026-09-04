@@ -23,7 +23,7 @@ top of that:
 Run it: python tools/check_release_safety.py
 It also runs automatically from update_site.py, from the git pre-commit hook
 (tools/hooks/pre-commit), and in CI on every push (.github/workflows/).
-tools/test_release_safety.py exercises it against 36 planted leaks.
+tools/test_release_safety.py exercises it against 37 planted leaks.
 """
 from __future__ import annotations
 
@@ -138,6 +138,7 @@ AGENT_ROW = {"name": S, "score": N, "kind?": S, "best?": bool, "note?": S,
 # One aggregate LiveMacro Score per model per theme -- 4 numbers a row, the same
 # shape as the paper's Figure 3 panels. No per-release value can ride along.
 THEME_ROW = {"name": S, "kind": S, "scores": [N]}
+THEME_PERIOD_PANEL = {"key": S, "label": S, "rows": [THEME_ROW], "covers?": S, "current?": bool}
 # One final cumulative LiveBetting return per arm per market. The hourly series
 # behind it (>1,400 points per window) stays in the private checkout; only its
 # last value is published.
@@ -153,8 +154,8 @@ SCHEMA = {
     "headline": {"title": S, "window": S, "note": S, "period_note?": S, "source": S,
                  "rows": [ROW], "periods?": [PERIOD_PANEL]},
     "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW]},
-    "themes": {"title": S, "window": S, "note": S,
-               "columns": [S], "rows": [THEME_ROW]},
+    "themes": {"title": S, "window": S, "note": S, "period_note?": S,
+               "columns": [S], "rows": [THEME_ROW], "periods?": [THEME_PERIOD_PANEL]},
     "betting": {"title": S, "window": S, "note": S,
                 "markets": [{"label": S, "rows": [BET_ROW]}]},
     # Each indicator carries a link to the agency that publishes it.

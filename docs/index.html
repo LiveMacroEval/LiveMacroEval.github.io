@@ -23,8 +23,8 @@
       <a href="#indicators">Indicators</a>
       <a href="#metrics">Scoring</a>
       <a href="#leaderboard">Leaderboard</a>
-      <a href="#betting">LiveBetting</a>
       <a href="#themes">Themes</a>
+      <a href="#betting">LiveBetting</a>
       <a href="#cite">Cite</a>
     </div>
   </div>
@@ -296,6 +296,27 @@
   </div>
 </section>
 
+<section id="themes">
+  <div class="wrap">
+    <h2>Score by theme: where the skill is</h2>
+    <p>Nine target months live. The overall score hides sharp differences across the economy:
+      the same arm can beat the consensus on one block and trail it on another.</p>
+    <div class="tabs" id="th-tabs"></div>
+    <div class="tablewrap">
+      <table class="themetable">
+        <thead><tr id="th-head"></tr></thead>
+        <tbody id="th-body"></tbody>
+      </table>
+    </div>
+    <p class="note" id="th-note">—</p>
+    <p>GPT-5 beats the consensus on Supply &amp; Production, and several arms beat it on Housing; both
+      blocks lean on higher-frequency components that reward updating inside the window. Most arms
+      fall behind on Demand &amp; Inflation, where well-anchored expectations protect the
+      professionals. The Labor Market sits near zero for every model, consistent with a
+      signal-to-noise ceiling on the household survey.</p>
+  </div>
+</section>
+
 <section id="betting">
   <div class="wrap">
     <h2>Real-time return: LiveBetting Score</h2>
@@ -313,26 +334,6 @@
          curves carry the page's own type and palette. Each chart carries its
          own tab strip: the markets resolve on different calendars. -->
     <div id="bet-charts"></div>
-  </div>
-</section>
-
-<section id="themes">
-  <div class="wrap">
-    <h2>Score by theme: where the skill is</h2>
-    <p>Nine target months live. The top agent sits just below the professional consensus overall,
-      but that aggregate hides sharp differences across the economy.</p>
-    <div class="tablewrap">
-      <table class="themetable">
-        <thead><tr id="th-head"></tr></thead>
-        <tbody id="th-body"></tbody>
-      </table>
-    </div>
-    <p class="note" id="th-note">—</p>
-    <p>Agents beat the consensus on Supply &amp; Production and, for most arms, on Housing, both of
-      which lean on higher-frequency components that reward updating inside the window. They fall behind on Demand
-      &amp; Inflation, where well-anchored expectations protect the professionals. The Labor Market
-      sits near zero for every model, consistent with a signal-to-noise ceiling on the household
-      survey.</p>
   </div>
 </section>
 
@@ -378,6 +379,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903d"></script>
+<script src="assets/js/main.js?v=20260903e"></script>
 </body>
 </html>

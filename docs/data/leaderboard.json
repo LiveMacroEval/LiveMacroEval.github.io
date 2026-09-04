@@ -337,8 +337,9 @@
   },
   "themes": {
     "title": "LiveMacro Score by theme",
-    "window": "Same live window as the all-months leaderboard.",
-    "note": "Each column restricts the score to the indicators in that theme. Positive means the model beat the Bloomberg consensus on that block of the economy.",
+    "window": "All quarters \u2014 the same live window as the leaderboard.",
+    "note": "Each column restricts the score to the indicators in that theme. Positive means the model beat the Bloomberg consensus on that block of the economy. A release an arm reached only with a nowcast frozen by an outage is dropped for that arm.",
+    "period_note": "Each quarter tab restricts the theme scores to the releases whose reference month falls in that quarter, with the same event rule as the leaderboard; a release an arm reached only with a nowcast frozen by an outage is dropped for that arm. The newest tab is the quarter in progress.",
     "columns": [
       "Supply & Production",
       "Demand & Inflation",
@@ -347,6 +348,16 @@
     ],
     "rows": [
       {
+        "name": "Claude Code multi-agent",
+        "kind": "llm",
+        "scores": [
+          -0.02,
+          0.042,
+          -0.003,
+          0.019
+        ]
+      },
+      {
         "name": "GPT-5",
         "kind": "llm",
         "scores": [
@@ -354,16 +365,6 @@
           -0.034,
           -0.001,
           -0.013
-        ]
-      },
-      {
-        "name": "Claude Code multi-agent",
-        "kind": "llm",
-        "scores": [
-          -0.018,
-          -0.038,
-          -0.003,
-          0.017
         ]
       },
       {
@@ -405,6 +406,215 @@
           -0.007,
           -0.092
         ]
+      }
+    ],
+    "periods": [
+      {
+        "key": "2025-Q4",
+        "label": "Q4 2025",
+        "rows": [
+          {
+            "name": "GPT-5",
+            "kind": "llm",
+            "scores": [
+              0.161,
+              -0.02,
+              -0.001,
+              -0.108
+            ]
+          },
+          {
+            "name": "auto-ARIMA",
+            "kind": "econ",
+            "scores": [
+              0.065,
+              -0.204,
+              -0.011,
+              -0.027
+            ]
+          },
+          {
+            "name": "Claude-4.5-Sonnet",
+            "kind": "llm",
+            "scores": [
+              -0.293,
+              -0.235,
+              0.001,
+              0.023
+            ]
+          }
+        ],
+        "covers": "Nov\u2013Dec 2025"
+      },
+      {
+        "key": "2026-Q1",
+        "label": "Q1 2026",
+        "rows": [
+          {
+            "name": "GPT-5",
+            "kind": "llm",
+            "scores": [
+              0.068,
+              -0.006,
+              0.0,
+              0.07
+            ]
+          },
+          {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "scores": [
+              0.006,
+              -0.03,
+              -0.026,
+              0.076
+            ]
+          },
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "scores": [
+              -0.018,
+              -0.141,
+              -0.01,
+              0.19
+            ]
+          },
+          {
+            "name": "Claude-4.5-Sonnet",
+            "kind": "llm",
+            "scores": [
+              -0.005,
+              -0.005,
+              0.001,
+              -0.017
+            ]
+          },
+          {
+            "name": "auto-ARIMA",
+            "kind": "econ",
+            "scores": [
+              0.007,
+              -0.186,
+              -0.005,
+              -0.002
+            ]
+          }
+        ]
+      },
+      {
+        "key": "2026-Q2",
+        "label": "Q2 2026",
+        "rows": [
+          {
+            "name": "Claude-4.5-Sonnet",
+            "kind": "llm",
+            "scores": [
+              -0.002,
+              -0.049,
+              -0.003,
+              0.034
+            ]
+          },
+          {
+            "name": "GPT-5",
+            "kind": "llm",
+            "scores": [
+              0.025,
+              -0.13,
+              -0.007,
+              -0.001
+            ]
+          },
+          {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "scores": [
+              -0.001,
+              -0.488,
+              0.016,
+              0.027
+            ]
+          },
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "scores": [
+              0.05,
+              -0.363,
+              -0.007,
+              -0.224
+            ]
+          },
+          {
+            "name": "auto-ARIMA",
+            "kind": "econ",
+            "scores": [
+              -0.043,
+              -0.558,
+              -0.03,
+              -0.002
+            ]
+          }
+        ]
+      },
+      {
+        "key": "2026-Q3",
+        "label": "Q3 2026",
+        "rows": [
+          {
+            "name": "auto-ARIMA",
+            "kind": "econ",
+            "scores": [
+              -0.217,
+              0.093,
+              0.029,
+              0.071
+            ]
+          },
+          {
+            "name": "GPT-5",
+            "kind": "llm",
+            "scores": [
+              -0.061,
+              -0.035,
+              -0.01,
+              -0.118
+            ]
+          },
+          {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "scores": [
+              -0.459,
+              0.243,
+              0.044,
+              -0.094
+            ]
+          },
+          {
+            "name": "Claude-4.5-Sonnet",
+            "kind": "llm",
+            "scores": [
+              -0.314,
+              -0.666,
+              -0.003,
+              0.131
+            ]
+          },
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "scores": [
+              -0.411,
+              -0.708,
+              0.041,
+              -0.194
+            ]
+          }
+        ],
+        "covers": "Jul 2026 so far",
+        "current": true
       }
     ]
   },

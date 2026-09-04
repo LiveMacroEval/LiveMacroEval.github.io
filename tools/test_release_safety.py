@@ -248,6 +248,13 @@ def m_month_row_extra_field(d: Path):
     j["headline"]["periods"][0]["rows"][1]["raw_surprise"] = 0.42
     p.write_text(json.dumps(j))
 
+def m_theme_period_extra_field(d: Path):
+    """leaderboard.json: a per-field value added to a theme period row."""
+    p = d / "data/leaderboard.json"
+    j = json.loads(p.read_text())
+    j["themes"]["periods"][0]["rows"][0]["surprises"] = [0.1, -0.2, 0.3]
+    p.write_text(json.dumps(j))
+
 def m_month_panels_per_release(d: Path):
     """leaderboard.json: a 'period' tab per release is a per-release table."""
     p = d / "data/leaderboard.json"
@@ -296,6 +303,7 @@ CASES = [
     ("series.json: a month tab per resolution",    m_series_too_many_months, "months exceeds"),
     ("leaderboard.json: raw value in a period row", m_month_row_extra_field, "unknown key"),
     ("leaderboard.json: a period tab per release", m_month_panels_per_release, "exceeds the 30 cap"),
+    ("leaderboard.json: per-field values in a theme row", m_theme_period_extra_field, "unknown key"),
 ]
 
 

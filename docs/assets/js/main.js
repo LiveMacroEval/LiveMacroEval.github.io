@@ -173,21 +173,45 @@ function renderAgentDesign(a) {
   if (note) note.textContent = a.note;
 }
 
-/* Models down the side, themes across the top. */
+/* Models down the side, themes across the top. Tabbed like the leaderboard:
+   "All quarters", then each quarter newest first, with the same captions. */
 function renderThemes(t) {
-  if (!byId('th-body')) return;
-  const max = Math.max(...t.rows.flatMap(r => r.scores.map(Math.abs))) || 1;
+  const body = byId('th-body');
+  if (!body) return;
   const head = byId('th-head');
   if (head) head.innerHTML =
     '<th>Model</th>' + t.columns.map(c => `<th class="num">${esc(c)}</th>`).join('');
-  byId('th-body').innerHTML = t.rows.map(r => `
-    <tr>
-      <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${
-        { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || ''}</span></td>
-      ${r.scores.map(v => `<td class="cell">${scoreCell(v)}${cellBar(v, max)}</td>`).join('')}
-    </tr>`).join('');
-  const tn = byId('th-note');
-  if (tn) tn.textContent = `${t.window} ${t.note}`;
+  const views = [{ key: 'all', label: 'All quarters', rows: t.rows, window: t.window,
+                   note: t.note }]
+    .concat((t.periods || []).slice().reverse().map(p => ({
+      key: p.key, label: p.current ? `${p.label} · so far` : p.label, rows: p.rows,
+      window: periodHeader(p), note: t.period_note || t.note,
+    })));
+  let active = 'all';
+  const tabs = byId('th-tabs');
+
+  function draw() {
+    const v = views.find(x => x.key === active) || views[0];
+    const max = Math.max(...v.rows.flatMap(r => r.scores.map(Math.abs))) || 1;
+    const html = [`<tr class="grouphdr"><td colspan="${t.columns.length + 1}">${esc(v.window)}</td></tr>`];
+    for (const r of v.rows) {
+      html.push(`<tr>
+        <td><span class="rowname">${esc(r.name)}</span><span class="kind ${r.kind}">${
+          { llm: 'LLM', human: 'Human', econ: 'Econ' }[r.kind] || ''}</span></td>
+        ${r.scores.map(x => `<td class="cell">${scoreCell(x)}${cellBar(x, max)}</td>`).join('')}
+      </tr>`);
+    }
+    body.innerHTML = html.join('');
+    const tn = byId('th-note');
+    if (tn) tn.textContent = v.note;
+  }
+  function pick(key) {
+    active = key;
+    if (tabs) tabStrip(tabs, views, active, pick);
+    draw();
+  }
+  if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
+  draw();
 }
 
 function renderIndicators(list) {

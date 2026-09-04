@@ -665,6 +665,65 @@ def read_period_scores(period_dir: Path, consensus_label: str,
     return panels, all_rows
 
 
+def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
+                       panels: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(theme rows, theme period panels) from the by-period run, which scores
+    every theme with the same event rule and stale-event drop as the
+    leaderboard. The all-period rows must reproduce the theme pipeline's own
+    tables (step 15.5) for every arm the by-period run did not touch; that is
+    asserted here. Panels mirror the leaderboard's (key, label, covers,
+    current) so the two tab strips read the same."""
+    meta = json.loads((period_dir / "metadata.json").read_text())
+    group = meta.get("group", "quarter")
+    csv_path = period_dir / f"final_vs_final_themes_by_{group}.csv"
+    if not csv_path.exists():
+        sys.exit(f"by-period theme CSV not found:\n  {csv_path}")
+    stale = set(meta.get("stale_events_dropped", {}))
+    scores: dict[tuple[str, str], dict[str, float]] = {}   # (period, model) -> theme -> BDRC
+    with csv_path.open() as fh:
+        for r in csv.DictReader(fh):
+            scores.setdefault((r["period"], r["model"]), {})[r["theme"]] = float(r["BDRC_point"])
+    # cross-check against the theme pipeline's tables
+    for key, _label in THEMES:
+        table = plots_root / "plots_bloomberg_no_agent" / variant / key / "metric_ranking_table.csv"
+        if not table.exists():
+            sys.exit(f"theme table not found:\n  {table}")
+        with table.open() as fh:
+            for r in csv.DictReader(fh):
+                m = r["model"]
+                mine = scores.get(("all", m), {}).get(key)
+                if m in stale or mine is None:
+                    continue
+                if abs(mine - float(r["BDRC"])) > 1e-6:
+                    sys.exit(f"themes: {m}/{key} by-period {mine:.6f} differs from the theme "
+                             f"pipeline's {float(r['BDRC']):.6f}")
+
+    def rows_for(period: str) -> list[dict]:
+        rows = []
+        for (p, m), by_theme in scores.items():
+            if p != period or m in DROPPED:
+                continue
+            vals = [by_theme.get(k) for k, _ in THEMES]
+            if any(v is None for v in vals):
+                continue
+            rows.append({"name": MODEL_LABELS.get(m, m), "kind": MODEL_KIND.get(m, "llm"),
+                         "scores": [round(v, 3) or 0.0 for v in vals]})
+        rows.sort(key=lambda r: -sum(r["scores"]) / len(r["scores"]))
+        return rows
+
+    theme_panels = []
+    for panel in panels:
+        rows = rows_for(panel["key"])
+        if not rows:
+            continue
+        tp = {"key": panel["key"], "label": panel["label"], "rows": rows}
+        for k in ("covers", "current"):
+            if k in panel:
+                tp[k] = panel[k]
+        theme_panels.append(tp)
+    return rows_for("all"), theme_panels
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -744,6 +803,13 @@ def main() -> None:
         themes = read_themes(theme_root, args.theme_variant)
         data["themes"]["columns"] = themes["columns"]
         data["themes"]["rows"] = themes["rows"]
+        data["themes"].pop("periods", None)
+        if args.periods_dir:
+            rows, theme_panels = read_period_themes(
+                args.results_root / SCORING_SUBPATH / args.periods_dir, theme_root,
+                args.theme_variant, data["headline"]["periods"])
+            data["themes"]["rows"] = rows
+            data["themes"]["periods"] = theme_panels
 
         betting_dir = args.results_root / BETTING_SUBPATH / (args.betting_dir or PAPER_BETTING_DIR)
         data["betting"]["markets"] = read_betting(betting_dir)
