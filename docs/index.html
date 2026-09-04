@@ -257,10 +257,6 @@
 <section id="leaderboard">
   <div class="wrap">
     <h2>Leaderboard: LiveMacro Score</h2>
-    <p>The all-quarters view is the running score since the benchmark went live. Each quarter
-      tab scores only the releases whose reference month falls in that quarter, so it is noisier,
-      and the ranking moves from quarter to quarter. The newest tab is the quarter in progress
-      and says which months it holds so far.</p>
     <div class="tabs" id="lb-tabs"></div>
     <div class="tablewrap">
       <table>
@@ -280,8 +276,7 @@
   <div class="wrap">
     <h2>Tool and agent design</h2>
     <p>One base model, three ways of running it: a plain prompt, the same prompt with a
-      financial-data plug-in, and a multi-agent team. Scored on one coverage-matched set of
-      releases, so the rows are comparable with each other, not with the leaderboard above.</p>
+      financial-data plug-in, and a multi-agent team.</p>
     <div class="tablewrap">
       <table>
         <thead><tr>
@@ -309,26 +304,12 @@
       </table>
     </div>
     <p class="note" id="th-note">—</p>
-    <p>GPT-5 beats the consensus on Supply &amp; Production, and several arms beat it on Housing; both
-      blocks lean on higher-frequency components that reward updating inside the window. Most arms
-      fall behind on Demand &amp; Inflation, where well-anchored expectations protect the
-      professionals. The Labor Market sits near zero for every model, consistent with a
-      signal-to-noise ceiling on the household survey.</p>
   </div>
 </section>
 
 <section id="betting">
   <div class="wrap">
     <h2>Real-time return: LiveBetting Score</h2>
-    <p>Across the months since the paper window closed, the institutional nowcasts lead the frontier
-      agents on every market that has one. On real GDP the two frontier agents still finish the
-      window ahead of break-even and above the Atlanta Fed; on CPI and the unemployment rate they
-      finish in the red, a real limit on indicators where institutional models are tuned to known
-      economic structure. The Qwen arms appear in the month tabs up to the July 2026 change to
-      their job, and not on the cumulative charts.</p>
-    <p>The all-months view stitches each window end to end and carries the bankroll across them.
-      A month tab (a quarter, for GDP) re-bases at the start of that window, so it shows the return
-      on that window's bets alone; single windows swing far more than the cumulative curve does.</p>
 
     <!-- Drawn from data/series.json by main.js, not shipped as PNGs, so the
          curves carry the page's own type and palette. Each chart carries its
@@ -378,6 +359,6 @@
 
 <!-- ?v= is bumped whenever main.js changes shape, so a cached script
      can never pair with a newer page. -->
-<script src="assets/js/main.js?v=20260903f"></script>
+<script src="assets/js/main.js?v=20260903g"></script>
 </body>
 </html>
