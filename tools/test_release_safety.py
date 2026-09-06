@@ -204,13 +204,18 @@ def m_series_oversized(d: Path):
     _write_series(d, o)
 
 def m_series_too_many_numbers(d: Path):
-    """Under the per-curve cap, but far too many curves."""
+    """Under the per-curve cap, but far too many curves: enough copies of the
+    LONGEST cumulative curve to pass SERIES_MAX_NUMERIC whatever the real file
+    holds. (2026-09-06: a fixed 12 copies of the first market's first curve
+    stopped crossing the cap once that curve became a short, early-ending one.)"""
+    import math
+    from check_release_safety import SERIES_MAX_NUMERIC
     o = _series(d)
-    mk = o["betting"]["markets"][0]
-    proto = mk["series"][0]
-    mk["series"] = [dict(proto, name=f"arm{i}") for i in range(12)]
-    for m2 in o["betting"]["markets"][1:]:
-        m2["series"] = [dict(proto, name=f"arm{i}") for i in range(12)]
+    markets = o["betting"]["markets"]
+    proto = max((s for mk in markets for s in mk["series"]), key=lambda s: len(s["values"]))
+    per_market = max(12, math.ceil(SERIES_MAX_NUMERIC / (len(proto["values"]) * len(markets))) + 1)
+    for mk in markets:
+        mk["series"] = [dict(proto, name=f"arm{i}") for i in range(per_market)]
     _write_series(d, o)
 
 # ---- the month tabs (2026-09-03): a month block is the same curve shape under
