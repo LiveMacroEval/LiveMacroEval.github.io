@@ -2,8 +2,8 @@
 """Refresh the LiveMacroEval website from the Results pipeline outputs.
 
 Run after the monthly data refresh (see the private Results/UPDATE_PIPELINE.md).
-Rewrites docs/data/leaderboard.json and re-copies the paper figures. The site
-renders every number from that JSON, so this is the only step.
+Rewrites docs/data/leaderboard.json and docs/data/series.json. The site
+renders every number and every chart from those two files, so this is the only step.
 
 IMPORTANT — this repo is public, the scoring inputs are not.
 ------------------------------------------------------------
@@ -93,22 +93,13 @@ DROPPED = {"claude-code-agent", "gpt-5-search-api-reasoned"}
 # Only these columns are ever read out of the overlay. Aggregates only.
 COLS = ("model", "n_events", "BDRC_point", "BDRC_ci90_lo", "BDRC_ci90_hi")
 
-FIGURES = [
-    # Rendered on the site.
-    "pipeline_overview.png",
-    "case_study_cpi_yoy_2026_03.png",
-    "case_study_pce_mom_2026_03.png",
-    # Superseded by the on-page tables (themes, LiveBetting, headline bar
-    # chart). Kept on the allowlist so the files may remain in docs/ until
-    # someone decides to prune them; nothing links to them.
-    "bdrc_score_no_agent_ci90.png",
-    "theme_production.png",
-    "theme_inflation_consumption_services.png",
-    "theme_labor_market.png",
-    "theme_housing.png",
-    "continuous_returns_real_gdp_qoq_mar-anchor-claude-sonnet-4.5.png",
-    "continuous_returns_cpi_yoy_mar-anchor-claude-sonnet-4.5.png",
-    "continuous_returns_unemployment_rate_mar-anchor-claude-sonnet-4.5.png",
+FIGURES: list[str] = [
+    # Empty since 2026-09-06: every figure on the site is drawn on the page
+    # (Figure 1 inline SVG, charts and tables from docs/data/*.json). The list
+    # stays as the single source of truth for check_release_safety.py's
+    # allowlist; a PNG added here must exist under docs/assets/figures/ AND be
+    # copied from --figures-root by this script. The Figure 1 icons under
+    # assets/figures/pipeline/ are allowlisted by the checker itself.
 ]
 
 # ---------------------------------------------------------------- themes ----

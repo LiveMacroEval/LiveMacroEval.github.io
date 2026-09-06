@@ -16,7 +16,7 @@ docs/                        THE PUBLISHED SITE — 16 files, nothing else
 ├── data/series.json         the line charts: cumulative + per-month curves
 ├── assets/css/style.css
 ├── assets/js/main.js        fetches the JSON, renders the tables
-├── assets/figures/*.png     the 10 aggregate figures from the paper
+├── assets/figures/pipeline/ the Figure 1 icons (every chart is drawn from data/*.json)
 ├── .gitignore               blocks row-level file types from landing here
 └── .nojekyll                serve as-is, no Jekyll
 

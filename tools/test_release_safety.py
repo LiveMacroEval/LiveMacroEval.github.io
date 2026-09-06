@@ -95,11 +95,11 @@ def m_number_run(d: Path):
     p.write_text(p.read_text() + f"\nconst SERIES=[{series}];\n")
 
 def m_rogue_figure(d: Path):
-    shutil.copy2(d / "assets/figures/theme_housing.png",
+    shutil.copy2(d / "assets/figures/pipeline/housing.png",
                  d / "assets/figures/per_release_scatter.png")
 
 def m_csv_as_png(d: Path):
-    (d / "assets/figures/theme_housing.png").write_text(OVERLAY_CSV)
+    (d / "assets/figures/pipeline/housing.png").write_text(OVERLAY_CSV)
 
 def m_secret(d: Path):
     p = d / "assets/js/main.js"
