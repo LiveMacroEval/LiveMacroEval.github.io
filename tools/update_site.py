@@ -28,14 +28,22 @@ Usage
     python tools/update_site.py \
         --overlay investing_overlay_0825 --periods-dir investing_overlay_0825_by_quarter \
         --theme-plots market_surprise_capture_score/step_15_5_scoring_by_theme/plots_0825 \
-        --betting-dir continuous_returns_20260831_with_qwen \
+        --betting-dir continuous_returns_20260905/series \
         --window "Target reference periods Nov 2025 - Jul 2026" \
-        --last-updated 2026-08-25
+        --last-updated 2026-09-05
+
+Since 2026-09-05 the published numbers carry a 24 h staleness cap everywhere:
+the score drops a (model, release) whose latest nowcast is older than a day
+(overlay `investing_overlay_0825_cap24h`, built by run_live_scoring_cap.py in
+the private checkout), and LiveBetting bets at fixed slots one hour after the
+agents' scheduled runs, skipping a slot whose latest nowcast is older than a day
+(run_earnings_0905.py). The betting tabs are quarters, like the leaderboard.
 
 The leaderboard's quarter tabs read `--periods-dir`, the by-period sibling of
 the overlay written by score_by_period_<MMDD>.py in the private checkout. The
-betting charts' month tabs are the `months` blocks in series.json, derived
-here from the same continuous-returns CSVs as the cumulative curves.
+betting charts' quarter tabs are the `months` blocks in series.json (the key
+name predates the switch to quarters), derived here from the same
+continuous-returns CSVs as the cumulative curves.
 """
 from __future__ import annotations
 
@@ -132,10 +140,10 @@ BETTING_MARKETS = [
     # published (user decision 2026-09-03: no institutional nowcast to compare
     # against). A market whose CSV is absent is skipped with a printed note.
 ]
-# A quarterly market's tab is the whole quarter: the Q1 GDP market is bet
-# across a "feb" and a "mar" segment (the paper's split of one window), and
-# the tab merges them, re-based once at the Feb shared start.
-QUARTERLY_MARKETS = {"real_gdp_qoq"}
+# Every market's tabs are quarters (2026-09-05); see _window_of. The Q1 GDP
+# market is bet across a "feb" and a "mar" segment (the paper's split of one
+# window) and the tab merges them, re-based once at the Feb shared start.
+QUARTERLY_MARKETS = {"real_gdp_qoq"}   # kept for reference; _window_of no longer needs it
 
 # Segment tags written by the continuous-returns scripts: three-letter target
 # months, plus "q2" for the second-quarter GDP market.
@@ -170,9 +178,11 @@ BETTING_DROPPED: set[str] = set()
 # +569%. So for these arms a window holding ANY bet on or after the cutoff is
 # dropped, together with every later window, and the arm's cumulative curve
 # ends with its last clean window. Earlier windows stay (user decision
-# 2026-09-03: keep the past months, drop only the broken ones). The betting
-# run must therefore INCLUDE Qwen (`plot_continuous_0831.py --include-qwen`);
-# note that puts Qwen back into the Feb shared start, which it binds.
+# 2026-09-03: keep the past windows, drop only the broken ones). The betting
+# run must therefore INCLUDE Qwen (plot_continuous_0905.py writes its series/
+# with Qwen in); note that puts Qwen back into the Feb shared start, which it
+# binds. With quarter windows this removes Qwen's Q2 on CPI and GDP (those Q2
+# markets ran past 2026-07-05) and keeps it on unemployment.
 BETTING_CUTOFF = {
     "qwen3-235b-a22b-instruct-2507": dt.datetime(2026, 7, 5),
     "qwen3-next-80b-a3b-instruct": dt.datetime(2026, 7, 5),
@@ -287,9 +297,15 @@ def _segment_label(tag: str, first_bet: dt.datetime | None) -> tuple[str, str]:
 
 
 def _window_of(market_key: str, tag: str, first_bet: dt.datetime | None) -> tuple[str, str]:
-    """The tab a segment belongs to: its month, or its quarter on a quarterly market."""
+    """The tab a segment belongs to: the QUARTER of its target month.
+
+    2026-09-05: every market is tabbed by quarter, like the leaderboard (the
+    monthly tabs were too volatile to read). A monthly market's Feb+Mar
+    segments make Q1, Apr+May+Jun make Q2; a quarterly GDP market is its own
+    quarter. The JSON key holding the tabs is still `months` so the release
+    gate's schema is unchanged."""
     key, label = _segment_label(tag, first_bet)
-    if market_key in QUARTERLY_MARKETS and "-Q" not in key and "-" in key:
+    if "-Q" not in key and "-" in key:
         y, m = key.split("-")
         q = (int(m) - 1) // 3 + 1
         return f"{y}-Q{q}", f"Q{q} {y}"

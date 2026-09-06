@@ -4,7 +4,7 @@
 update_site.py derives docs/data/series.json from the pipeline's stitched
 continuous-returns CSVs. This script goes one layer deeper and rebuilds every
 number from the per-bet files that those CSVs were built from --
-`results/bet_hourly_latest_<MonDD>/<market>/hourly_latest/betting_results_*` --
+`results/bet_scheduled_<MonDD>/<market>/hourly_latest/betting_results_*` --
 using only the segment SPEC from the pipeline (which months, which calendar
 windows, which arm anchors the shared start) and arithmetic written out here:
 
@@ -12,7 +12,7 @@ windows, which arm anchors the shared start) and arithmetic written out here:
     value     = sum of shares_bought         over the kept WINNING bets
     return    = (value - invested) / invested
 
-per arm, per tab window (a month, or a quarter on the GDP market), and for
+per arm, per tab window (a quarter, since 2026-09-05), and for
 the cumulative curve as the sum over windows. Every final value in
 series.json and every row of the LiveBetting table in leaderboard.json must
 match to the published 0.1pp, every arm with kept bets must be present, and
@@ -20,7 +20,7 @@ each window curve must span exactly the days its bets span.
 
 Reads the private Results checkout (LIVEMACRO_RESULTS); publishes nothing.
 Conda env: livemacro (the pipeline's segment module imports matplotlib).
-Usage: python tools/validate_months.py [--betting-run bet_hourly_latest_Aug31]
+Usage: python tools/validate_months.py [--betting-run bet_scheduled_Sep05]
 """
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def final(curve: dict) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--betting-run", default="bet_hourly_latest_Aug31",
+    ap.add_argument("--betting-run", default="bet_scheduled_Sep05",
                     help="raw run under polymarket_return/results/ (default: %(default)s)")
     args = ap.parse_args()
     raw_root = RESULTS / "polymarket_return/results" / args.betting_run
@@ -126,7 +126,7 @@ def main() -> int:
                 seg_bets[seg.label] = bm
                 seg_first[seg.label] = min(d["datetime_utc"].iloc[0] for d in bm.values())
 
-        # ---- windows: a month, or the quarter on a quarterly market
+        # ---- windows: quarters (see update_site._window_of)
         win_of = {seg: _window_of(key, seg, seg_first[seg].to_pydatetime()) for seg in seg_bets}
         win_order = list(dict.fromkeys(w for w, _l in win_of.values()))
         win_t0 = {}

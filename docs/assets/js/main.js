@@ -73,8 +73,8 @@ function panelHeader(label) {
 }
 
 /* A strip of tab buttons. `views` is [{key, label}]; `pick` receives the key.
-   Used by the leaderboard (one tab per target month) and each LiveBetting
-   chart (one per betting window). Real buttons with tab roles, so a keyboard
+   Used by the leaderboard (one tab per target quarter) and each LiveBetting
+   chart (one per quarter window). Real buttons with tab roles, so a keyboard
    reaches them and a screen reader hears which one is selected. The strip
    scrolls sideways rather than wrapping, so it stays one line as months
    accumulate; the first tab (the aggregate) is sticky at the left edge. */
@@ -535,7 +535,7 @@ function renderBettingCharts(b) {
     const colorFor = s => colors[s.name] || SERIES_COLORS[s.name]
       || (s.kind === 'human' ? BASELINE_COLORS[0] : 'var(--s-grey)');
 
-    const views = [{ key: 'all', label: 'All months', series: m.series,
+    const views = [{ key: 'all', label: 'All quarters', series: m.series,
                      xLabel: 'Days since nowcasting start',
                      tail: 'cumulative LiveBetting return, every window end to end.' }]
       .concat((m.months || []).slice().reverse().map(mo => ({

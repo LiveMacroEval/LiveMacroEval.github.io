@@ -240,13 +240,15 @@
         <h4>LiveMacro Score</h4>
         <p class="cardp">Macro surprises move equity prices. We weight each indicator by its measured
           effect on <b class="hl">S&amp;P 500 futures</b> at the moment of release, so sixteen accuracies collapse into <b class="hl">one comparable number</b>. <b>+1</b> is perfect, <b>0</b> ties the consensus, <b>−1</b> is
-          arbitrarily worse.</p>
+          arbitrarily worse. Each release is scored on the nowcast in force when it comes out, and only if
+          that nowcast is less than a day old.</p>
       </div>
       <div class="card">
         <span class="tag">Metric 2</span>
         <h4>LiveBetting Score</h4>
-        <p class="cardp">Every hour before a release we bet $1 on the <b class="hl">Polymarket</b> bucket holding
-          the agent's latest nowcast. Prices are the crowd's own odds, so liquidity is priced in:
+        <p class="cardp">At fixed times each day before a release, one hour after the agents' scheduled runs,
+          we bet $1 on the <b class="hl">Polymarket</b> bucket holding the agent's latest nowcast, provided
+          that nowcast is less than a day old. Prices are the crowd's own odds, so liquidity is priced in:
           beating a confident crowd pays a lot, agreeing with it pays little. The score is unit-free,
           so it aggregates across very different indicators.</p>
       </div>
