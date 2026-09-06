@@ -187,11 +187,12 @@ BETTING_CUTOFF = {
     "qwen3-235b-a22b-instruct-2507": dt.datetime(2026, 7, 5),
     "qwen3-next-80b-a3b-instruct": dt.datetime(2026, 7, 5),
 }
-# Arms drawn in the month tabs but not on the cumulative "All months" chart
-# (nor in its table): with the cutoff, a Qwen cumulative curve stops months
-# before the others, so its "final" would not be comparable (user decision
-# 2026-09-03). The month tabs are like-for-like windows, so Qwen stays there.
-BETTING_CUMULATIVE_HIDDEN = set(BETTING_CUTOFF)
+# 2026-09-05: nothing is hidden from the cumulative "All quarters" chart. A Qwen
+# arm's cumulative curve is built from its kept windows only (the cutoff above),
+# so it ENDS with its last clean window while the other arms run on --
+# consistent with the quarter tabs, where it is simply absent afterwards. Its
+# LiveBetting table row is the final of that truncated curve.
+BETTING_CUMULATIVE_HIDDEN: set[str] = set()
 
 
 def _is_human(arm: str) -> bool:

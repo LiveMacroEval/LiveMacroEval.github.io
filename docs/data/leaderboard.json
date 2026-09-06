@@ -581,11 +581,21 @@
   "betting": {
     "title": "LiveBetting Score",
     "window": "Target windows Feb \u2013 Jul 2026; Q1 and Q2 2026 for real GDP.",
-    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET through the current window), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. Both Qwen arms changed regime on July 5, 2026 (an upstream change to their job): a Qwen window holding any bet from that date on is not shown, nor any later window, and the Qwen arms are kept off the cumulative chart, where a curve that stops early would not be comparable. Their earlier windows are in the quarter tabs.",
+    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET through the current window), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. Both Qwen arms changed regime on July 5, 2026 (an upstream change to their job): a Qwen window holding any bet from that date on is not shown, nor any later window, so a Qwen curve on the cumulative chart ends with its last clean window while the others run on, and the Qwen arms are absent from the later quarter tabs.",
     "markets": [
       {
         "label": "Real GDP",
         "rows": [
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "ret": 472.0
+          },
+          {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "ret": 391.0
+          },
           {
             "name": "NY Fed Staff Nowcast",
             "kind": "human",
@@ -632,6 +642,11 @@
             "ret": 61.9
           },
           {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "ret": 34.7
+          },
+          {
             "name": "Claude Code agent",
             "kind": "llm",
             "ret": 0.2
@@ -647,6 +662,11 @@
             "ret": -60.7
           },
           {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "ret": -72.1
+          },
+          {
             "name": "Claude Code multi-agent",
             "kind": "llm",
             "ret": -77.6
@@ -657,6 +677,11 @@
         "label": "CPI",
         "rows": [
           {
+            "name": "Qwen3-235B",
+            "kind": "llm",
+            "ret": 36.1
+          },
+          {
             "name": "Cleveland Fed Nowcast",
             "kind": "human",
             "ret": 33.2
@@ -665,6 +690,11 @@
             "name": "GPT-5",
             "kind": "llm",
             "ret": -33.7
+          },
+          {
+            "name": "Qwen3-80B",
+            "kind": "llm",
+            "ret": -38.3
           },
           {
             "name": "Claude Code agent",
