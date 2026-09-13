@@ -65,7 +65,7 @@ ALLOWED_FILES |= set(PIPELINE_ICON_FILES)
 
 # Per-file byte ceilings. Generous, but a data dump blows past them.
 MAX_BYTES = {
-    ".json": 64 * 1024,   # series.json carries the month tabs; each JSON also has its own cap below
+    ".json": 384 * 1024,  # series.json carries the quarter tabs; each JSON also has its own cap below
     ".html": 128 * 1024,
     ".css": 64 * 1024,
     ".js": 64 * 1024,
@@ -85,14 +85,17 @@ IMAGE_MAGIC = {
 # --------------------------------------------------------------------------
 # 2. leaderboard.json schema. Only the final table may live here.
 # --------------------------------------------------------------------------
-MAX_JSON_BYTES = 32 * 1024
+MAX_JSON_BYTES = 128 * 1024
 MAX_ARRAY_LEN = 30        # a per-release or hourly series is far longer
 # One row per model per PANEL. The period tabs (2026-09-03) add a panel per
-# quarter -- four so far, each <= 8 rows of score + CI pair + count -- so the
-# real file holds ~180 numbers (the cap was sized when the tabs were monthly).
-# Still one row per model, never one per release: a release-level dump would
-# need thousands.
-MAX_NUMERIC_LITERALS = 500
+# quarter, each one row per arm of score + CI pair. This is the cap that keeps
+# the file a TABLE; MAX_ARRAY_LEN is what keeps it one row per model rather
+# than one per release, and it is deliberately left at 30 -- a per-release
+# table needs hundreds of rows or hundreds of panels and trips it either way.
+# Sized 2026-09-12 for the growth the caps have to survive: ~18 arms x (1 + one
+# panel per quarter) x 3 numbers in the headline plus x 4 in the themes is
+# ~1,300 numbers after three more years of quarters. See RATIONALE below.
+MAX_NUMERIC_LITERALS = 2000
 
 # --------------------------------------------------------------------------
 # 2b. series.json -- the line charts, drawn on the page instead of shipped as
@@ -111,18 +114,34 @@ MAX_NUMERIC_LITERALS = 500
 #     edit cannot quietly add them.
 #   * both are already public as PNGs in the paper. This changes precision,
 #     not kind.
-# The caps are sized just above the real payload, so a full hourly dump
-# (>1,400 points per market) still cannot fit. Raised 2026-09-03 for the month
-# tabs: four markets across six target months, each published twice -- the
-# cumulative curve and the month-by-month re-based curve -- is ~3,300 daily
-# points in ~27 KB. The per-curve length cap and the one-day step floor are
-# what keep an hourly series out; the totals just have to hold the real set.
-SERIES_MAX_BYTES = 40 * 1024
-SERIES_MAX_LEN = 200          # longest single curve; hourly would be 1,400+
-SERIES_MAX_NUMERIC = 4500     # the real file holds ~3,300
+# RATIONALE for the sizes (rewritten 2026-09-12).
+#
+# What actually keeps a raw series out of docs/ is RESOLUTION, not size: the
+# one-day step floor on betting curves, the six-hour floor on case-study
+# panels, and the rounding checks. Those are scale-free -- they hold however
+# long the study runs. The size caps are a second net, and they are the only
+# ones that go stale, because the published payload grows every month while a
+# fixed number does not: on 2026-09-06 the caps were set ~25% above the real
+# file, and one refresh of ~570 new daily points would have crossed
+# SERIES_MAX_NUMERIC and blocked the release for no good reason.
+#
+# So they are now sized for the GROWTH, not for today: roughly +570 points a
+# month for the three published markets, plus a step up whenever the arm
+# roster grows, which is about three to four more years of monthly refreshes.
+# The leak guarantee is unchanged by that, because an hourly dump scales with
+# the same span: publishing hourly instead of daily is always 24x more points,
+# so a cap set anywhere near the daily count catches it. At the current
+# ~129-day span an hourly curve is ~3,100 points, well past SERIES_MAX_LEN.
+#
+# Real payload on 2026-09-12: 3,603 points, 27,695 bytes, longest curve 129.
+# When a cap is next reached, re-derive it the same way -- do NOT relax the
+# step floors or the rounding instead; those are the actual guarantee.
+SERIES_MAX_BYTES = 256 * 1024
+SERIES_MAX_LEN = 1200         # longest single curve; hourly over the same span is 24x
+SERIES_MAX_NUMERIC = 30000    # the real file holds ~3,600
 SERIES_MAX_MARKETS = 8
-SERIES_MAX_CURVES = 12        # per market, and per month within a market
-SERIES_MAX_MONTHS = 12        # per market
+SERIES_MAX_CURVES = 20        # per market, and per quarter within a market (roster is ~18)
+SERIES_MAX_MONTHS = 24        # per market; the tabs are quarters, so six years
 SERIES_BETTING_DP = 1         # betting values rounded to 0.1pp
 SERIES_CASE_DP = 3
 

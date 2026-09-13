@@ -81,6 +81,35 @@ MODEL_LABELS = {
 }
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
+
+def _label(arm: str, table: dict, what: str, table_name: str) -> str:
+    """Display name for an arm, or a hard stop.
+
+    These two tables are hand-written because this repo must stand alone, so an
+    arm added to the roster since the last refresh used to fall through
+    `.get(arm, arm)` and be PUBLISHED UNDER ITS RAW PIPELINE ID. Nothing else
+    catches that -- the id is a perfectly valid string everywhere downstream.
+    The refresh pipeline fills both tables from its own roster before calling
+    main(), so reaching this error means update_site.py was run by hand on data
+    holding an arm it has never seen."""
+    try:
+        return table[arm]
+    except KeyError:
+        sys.exit(
+            f"no {what} for the arm {arm!r}.\n"
+            f"Add it to {table_name} in tools/update_site.py (and to DROPPED if it must "
+            f"stay off the site),\nor let the refresh pipeline supply it "
+            f"(Results/pipeline/7_site/run.py -> install_labels)."
+        )
+
+
+def model_label(arm: str) -> str:
+    return _label(arm, MODEL_LABELS, "model label", "MODEL_LABELS")
+
+
+def betting_label(arm: str) -> str:
+    return _label(arm, BETTING_LABELS, "betting label", "BETTING_LABELS")
+
 # Figure 2 in the paper drops the plug-in arm (n=11 outlier); keep the site
 # consistent. GPT-5 (reasoned) is off the site (user decision 2026-09-03).
 DROPPED = {"claude-code-agent", "gpt-5-search-api-reasoned"}
@@ -213,13 +242,68 @@ def read_themes(plots_root: Path, variant: str) -> dict:
         if any(v is None for v in scores):
             continue
         rows.append({
-            "name": MODEL_LABELS.get(arm, arm),
+            "name": model_label(arm),
             "kind": MODEL_KIND.get(arm, "llm"),
             "scores": scores,
         })
     # Order by mean score so the strongest all-round model leads.
     rows.sort(key=lambda r: -sum(r["scores"]) / len(r["scores"]))
     return {"columns": [label for _, label in THEMES], "rows": rows}
+
+
+# ---------------------------------------------------------- agent design ----
+# The "Tool and agent design" card: the same base model and live protocol under
+# three configurations, scored on ONE coverage-matched release set so the three
+# are comparable with each other (the overlay's matched_new_arms tables, step 3c
+# of the refresh). Which three configurations the card is about, and the names
+# they are presented under, are editorial -- so they are declared here. Every
+# NUMBER and the window come from the overlay, because until 2026-09-12 they did
+# not: the block was hand-written into leaderboard.json and no refresh touched
+# it, so it stayed frozen on its original window while the tables beside it
+# advanced each month.
+AGENT_DESIGN_BASELINE = "consensus baseline"
+AGENT_DESIGN_ROWS = [
+    ("claude-code-multiagent", "+ multi-agent team"),
+    ("claude-code-agent", "+ financial plug-in"),
+    ("claude-sonnet-4.5-api", "plain prompt (control)"),
+]
+
+
+def read_agent_design(overlay_dir: Path) -> dict:
+    """Rows and window for the agent-design card, from the coverage-matched tables."""
+    bmsc = overlay_dir / "matched_new_arms_bmsc.csv"
+    events = overlay_dir / "matched_new_arms_events.csv"
+    for f in (bmsc, events):
+        if not f.exists():
+            sys.exit(f"agent-design table not found:\n  {f}\n"
+                     "It is written by the refresh's scoring step (3c, "
+                     "matched_new_arms_comparison). Pass --skip-agent-design to leave the "
+                     "published block untouched when scoring against a frozen overlay.")
+    with bmsc.open() as fh:
+        scored = {r["model"]: float(r["LiveMacro_BDRC_headline"]) for r in csv.DictReader(fh)}
+    rows = [{"name": AGENT_DESIGN_BASELINE, "score": 0.0,
+             "note": "0 by construction", "kind": "human"}]
+    for arm, name in AGENT_DESIGN_ROWS:
+        if arm not in scored:
+            sys.exit(f"agent design: {arm} has no row in {bmsc.name}. Either it left the "
+                     "roster (update AGENT_DESIGN_ROWS) or the matched comparison did not "
+                     "cover it this refresh.")
+        # "or 0.0" collapses a rounded -0.0 to plain 0.0
+        rows.append({"name": name, "score": round(scored[arm], 3) or 0.0,
+                     "kind": "llm", "model": model_label(arm)})
+    best = max(rows[1:], key=lambda r: r["score"])
+    best["best"] = True
+
+    with events.open() as fh:
+        used = [r for r in csv.DictReader(fh) if str(r["in_headline_window"]).lower() == "true"]
+    if not used:
+        sys.exit(f"agent design: no in_headline_window rows in {events.name}")
+    lo = min(_parse_ts(r["release_datetime_et"]) for r in used)
+    hi = max(_parse_ts(r["release_datetime_et"]) for r in used)
+    span = (f"{MONTH_NAMES[lo.month - 1]} {lo.day} – {MONTH_NAMES[hi.month - 1]} {hi.day}, {hi.year}"
+            if lo.year == hi.year else
+            f"{MONTH_NAMES[lo.month - 1]} {lo.day}, {lo.year} – {MONTH_NAMES[hi.month - 1]} {hi.day}, {hi.year}")
+    return {"window": f"Coverage-matched releases, {span}.", "rows": rows}
 
 
 def read_betting(betting_dir: Path) -> list[dict]:
@@ -319,7 +403,7 @@ def _curve(arm: str, cell: dict[int, tuple[float, float]]) -> dict:
             last = round(cell[d][1], 1) or 0.0   # "or 0.0" turns -0.0 into 0.0
         values.append(last)
     return {
-        "name": BETTING_LABELS.get(arm, arm),
+        "name": betting_label(arm),
         "kind": "human" if _is_human(arm) else "llm",
         "start": lo,
         "values": values,
@@ -528,7 +612,7 @@ def _score_row(r: dict) -> dict:
     # no event count: the site publishes the score and its interval only
     # (user decision 2026-09-03)
     return {
-        "name": MODEL_LABELS.get(r["model"], r["model"]),
+        "name": model_label(r["model"]),
         "kind": MODEL_KIND.get(r["model"], "llm"),
         "score": round(float(r["BDRC_point"]), 3),
         "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
@@ -715,7 +799,7 @@ def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
             vals = [by_theme.get(k) for k, _ in THEMES]
             if any(v is None for v in vals):
                 continue
-            rows.append({"name": MODEL_LABELS.get(m, m), "kind": MODEL_KIND.get(m, "llm"),
+            rows.append({"name": model_label(m), "kind": MODEL_KIND.get(m, "llm"),
                          "scores": [round(v, 3) or 0.0 for v in vals]})
         rows.sort(key=lambda r: -sum(r["scores"]) / len(r["scores"]))
         return rows
@@ -767,6 +851,9 @@ def main() -> None:
                          % (BETTING_SUBPATH, PAPER_BETTING_DIR))
     ap.add_argument("--skip-themes", action="store_true",
                     help="leave the themes/betting blocks in the JSON untouched")
+    ap.add_argument("--skip-agent-design", action="store_true",
+                    help="leave the agent-design block untouched (needed only when the "
+                         "overlay has no matched_new_arms tables)")
     ap.add_argument("--skip-series", action="store_true",
                     help="leave docs/data/series.json (the line charts) untouched")
     ap.add_argument("--last-updated", default=None,
@@ -806,6 +893,11 @@ def main() -> None:
     data["headline"]["source"] = f"{SCORING_SUBPATH}/{args.overlay}/ (not redistributed)"
     if args.window:
         data["headline"]["window"] = args.window
+
+    if not args.skip_agent_design:
+        agent = read_agent_design(csv_path.parent)
+        data["agent_design"]["window"] = agent["window"]
+        data["agent_design"]["rows"] = agent["rows"]
 
     if not args.skip_themes:
         theme_root = args.results_root / (args.theme_plots or PAPER_THEME_PLOTS)

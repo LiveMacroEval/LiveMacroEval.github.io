@@ -5,8 +5,9 @@ update_site.py derives docs/data/series.json from the pipeline's stitched
 continuous-returns CSVs. This script goes one layer deeper and rebuilds every
 number from the per-bet files that those CSVs were built from --
 `results/bet_scheduled_<MonDD>/<market>/hourly_latest/betting_results_*` --
-using only the segment SPEC from the pipeline (which months, which calendar
-windows, which arm anchors the shared start) and arithmetic written out here:
+using only the segment SPEC the pipeline recorded in that run's
+`bet_schedule.json` (which months, which calendar windows, which arm anchors
+the shared start) and arithmetic written out here:
 
     invested  = sum of bet_amount            over the kept bets
     value     = sum of shares_bought         over the kept WINNING bets
@@ -42,10 +43,58 @@ from update_site import (  # noqa: E402
     BETTING_ANCHOR, BETTING_CUMULATIVE_HIDDEN, BETTING_CUTOFF, BETTING_DROPPED,
     BETTING_LABELS, BETTING_MARKETS, _window_of,
 )
-sys.path.insert(0, str(RESULTS / "polymarket_return"))
-from plot_continuous_0831 import make_segments  # noqa: E402  (segment SPEC only)
 
 fails = 0
+
+
+class Segment:
+    """The fields of the pipeline's SegmentSpec this script actually reads."""
+
+    __slots__ = ("label", "month_token", "calendar_window", "apply_shared_start",
+                 "shared_start_anchor")
+
+    def __init__(self, label, month_token, calendar_window, apply_shared_start,
+                 shared_start_anchor=None):
+        self.label = label
+        self.month_token = month_token
+        self.calendar_window = tuple(calendar_window) if calendar_window else None
+        self.apply_shared_start = apply_shared_start
+        self.shared_start_anchor = shared_start_anchor
+
+
+def load_spec(raw_root: Path) -> tuple[dict[str, list[Segment]], dict[str, str], str]:
+    """The segment layout and arm labels the betting run actually used.
+
+    They come from the run's own `bet_schedule.json`, which the pipeline writes
+    alongside the bet files. That matters: the layout is NOT static. It is the
+    frozen Feb->Jul list extended by every market marked `resolved` in the
+    private betting_markets.json, so it grows with each refresh, and the arm
+    roster grows with it. Importing plot_continuous_0831.make_segments instead
+    (as this script did until 2026-09-12) pinned the gate to the Feb->Jul
+    layout, so the first refresh that added a betting month made it recompute
+    a window the site no longer publishes and fail on every curve.
+
+    A run without the key -- the frozen pre-2026-09-12 drops, e.g.
+    bet_scheduled_Sep05 -- falls back to the frozen module, which is exactly
+    the layout those drops were built with."""
+    sched = raw_root / "bet_schedule.json"
+    written = json.loads(sched.read_text()) if sched.exists() else {}
+    spec = written.get("segments") or {}
+    if spec:
+        return ({var: [Segment(**sg) for sg in segs]
+                 for var, segs in spec["markets"].items()},
+                written.get("betting_labels") or {},
+                f"{sched.name} (segments written by the run)")
+    sys.path.insert(0, str(RESULTS / "polymarket_return"))
+    from plot_continuous_0831 import make_segments  # noqa: E402  (segment SPEC only)
+    # BETTING_ANCHOR is the CSV filename suffix ("mar-anchor-<model>"); the
+    # frozen segment spec wants the model name
+    anchor = BETTING_ANCHOR.split("mar-anchor-", 1)[-1]
+    return ({var: [Segment(sg.label, sg.month_token, sg.calendar_window,
+                           sg.apply_shared_start, sg.shared_start_anchor)
+                   for sg in segs]
+             for var, segs in make_segments(anchor).items()},
+            {}, "plot_continuous_0831.make_segments (frozen fallback)")
 
 
 def check(ok: bool, msg: str) -> None:
@@ -87,10 +136,12 @@ def main() -> int:
     site_markets = {m["key"]: m for m in series["betting"]["markets"]}
     table = {m["label"]: {r["name"]: r["ret"] for r in m["rows"]}
              for m in board["betting"]["markets"]}
-    # BETTING_ANCHOR is the CSV filename suffix ("mar-anchor-<model>"); the
-    # segment spec wants the model name
-    anchor_model = BETTING_ANCHOR.split("mar-anchor-", 1)[-1]
-    specs = make_segments(anchor_model)
+    specs, run_labels, spec_src = load_spec(raw_root)
+    print(f"  segment spec: {spec_src}")
+    # the run's own labels win: an arm added to the roster since this script was
+    # last edited is published under the name the pipeline gave it, not its id
+    labels = dict(BETTING_LABELS, **run_labels)
+    label_of = lambda m: labels.get(m, m)
     day = pd.Timedelta(days=1)
     n_curves = 0
 
@@ -174,7 +225,7 @@ def main() -> int:
         cum = {c["name"]: final(c) for c in sm["series"]}
 
         for model, wins in per.items():
-            name = BETTING_LABELS.get(model, model)
+            name = label_of(model)
             tot_inv = sum(c["inv"] for c in wins.values())
             tot_val = sum(c["val"] for c in wins.values())
             r_cum = (tot_val - tot_inv) / tot_inv * 100.0
@@ -200,11 +251,11 @@ def main() -> int:
                     check(curve["start"] == d0 and len(curve["values"]) == d1 - d0 + 1,
                           f"{label:17s} {name:26s} {w}: spans days {d0}..{d1}")
         # nothing published that the raw files do not support
-        raw_names = {BETTING_LABELS.get(m, m) for m in per if m not in BETTING_CUMULATIVE_HIDDEN}
+        raw_names = {label_of(m) for m in per if m not in BETTING_CUMULATIVE_HIDDEN}
         check(set(cum) == raw_names, f"{label}: published cumulative arms == arms with kept bets")
         for w, mo in pub_months.items():
             pub = {s["name"] for s in mo["series"]}
-            raw = {BETTING_LABELS.get(m, m) for m, wins in per.items() if w in wins}
+            raw = {label_of(m) for m, wins in per.items() if w in wins}
             check(pub == raw, f"{label} {w}: published arms == arms with kept bets")
 
     print(f"\n{n_curves} curves recomputed from raw bets; "

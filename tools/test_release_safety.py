@@ -123,10 +123,20 @@ def m_weaken_repo_gitignore(d: Path):
     p.write_text(p.read_text().replace(
         "Results/market_surprise_capture_score/**/bloomberg_overlay/\n", ""))
 
+def _filler(n: int) -> str:
+    """n bytes of harmless prose. Deliberately NOT a run of one character: that
+    trips the base64-blob sniff first, so the test would pass while proving
+    nothing about the byte cap it is named for."""
+    unit = "padding text that is plainly not data. "
+    return (unit * (n // len(unit) + 1))[:n]
+
+
 def m_oversized_json(d: Path):
+    """Sized from the cap, so raising the cap cannot silently disarm the test."""
+    from check_release_safety import MAX_JSON_BYTES
     p = d / "data/leaderboard.json"
     j = json.loads(p.read_text())
-    j["_comment"] = "x" * 40_000
+    j["_comment"] = _filler(MAX_JSON_BYTES + 4096)
     p.write_text(json.dumps(j))
 
 def m_pdf(d: Path):
@@ -159,11 +169,19 @@ def _series(d: Path) -> dict:
 def _write_series(d: Path, obj: dict):
     (d / "data/series.json").write_text(json.dumps(obj, separators=(",", ":")))
 
+def _hourly_len() -> int:
+    """An hourly curve over the published span, and never under the cap: the
+    real span only grows, and SERIES_MAX_LEN moves with it, so a hard-coded
+    1,500 would eventually stop proving anything."""
+    from check_release_safety import SERIES_MAX_LEN
+    return max(1500, SERIES_MAX_LEN + 1)
+
+
 def m_series_hourly_dump(d: Path):
     """The whole point of the caps: an hourly curve must not fit."""
     o = _series(d)
     o["betting"]["markets"][0]["series"][0]["values"] = [
-        round(i * 0.1, 1) for i in range(1500)]
+        round(i * 0.1, 1) for i in range(_hourly_len())]
     _write_series(d, o)
 
 def m_series_raw_nowcasts(d: Path):
@@ -199,8 +217,9 @@ def m_series_extra_top_key(d: Path):
     _write_series(d, o)
 
 def m_series_oversized(d: Path):
+    from check_release_safety import SERIES_MAX_BYTES
     o = _series(d)
-    o["_comment"] = "x" * 40000
+    o["_comment"] = _filler(SERIES_MAX_BYTES + 4096)
     _write_series(d, o)
 
 def m_series_too_many_numbers(d: Path):
@@ -224,7 +243,7 @@ def m_series_too_many_numbers(d: Path):
 def m_series_month_hourly_dump(d: Path):
     o = _series(d)
     o["betting"]["markets"][0]["months"][0]["series"][0]["values"] = [
-        round(i * 0.1, 1) for i in range(1500)]
+        round(i * 0.1, 1) for i in range(_hourly_len())]
     _write_series(d, o)
 
 def m_series_month_extra_key(d: Path):
@@ -240,10 +259,12 @@ def m_series_month_block_extra_key(d: Path):
 
 def m_series_too_many_months(d: Path):
     """A 'month' per market resolution instead of per target month."""
+    from check_release_safety import SERIES_MAX_MONTHS
     o = _series(d)
     mk = o["betting"]["markets"][0]
     proto = mk["months"][0]
-    mk["months"] = [dict(proto, key=f"2026-{i:02d}", label=f"m{i}") for i in range(13)]
+    mk["months"] = [dict(proto, key=f"tab{i}", label=f"m{i}")
+                    for i in range(SERIES_MAX_MONTHS + 1)]
     _write_series(d, o)
 
 def m_month_row_extra_field(d: Path):
