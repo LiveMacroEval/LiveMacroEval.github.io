@@ -140,8 +140,9 @@ inputs feed them:
   writes the ALL-period rows the site publishes as its headline: identical
   to the overlay's for every arm except those with outage-frozen nowcasts
   (`STALE_EVENTS`: the Claude Code arms, releases of 2026-08-10 to 08-21),
-  whose stale events are dropped so the multi-agent headline is the same 12
-  events as its agent-design row. No event counts are published.
+  whose stale events are dropped so the multi-agent headline matched its
+  agent-design row (12 events on the 2026-08-25 data). No event counts are
+  published.
 - **Betting curves.** Derived here from the same continuous-returns CSVs as
   the cumulative curves: each window (a month, or a quarter on the GDP
   market) is re-based at its start, so a tab shows the return on that
@@ -172,13 +173,22 @@ The betting run must include Qwen
 continuous_returns_20260831_with_qwen`), which also puts Qwen back into the
 February shared start that it binds. The arms that went live in June 2026
 appear everywhere they have data. The tool-and-agent-design comparison is its
-own table (`agent_design` in the JSON, hand-maintained from the private
-`matched_new_arms_bmsc.csv`), each row naming the arm it is.
+own table (`agent_design` in the JSON), each row naming the arm it is. It is a
+fixed study -- the Claude Code arms changed base model on 2026-09-04 and the
+plain control retired on 2026-09-05 -- so a refresh leaves it as published.
+`update_site.py --refresh-agent-design` rebuilds it from the private
+`matched_new_arms_bmsc.csv`, and refuses unless its three rows share one
+complete release set.
 
 ### Adding a model arm
 
-Add its code name to `MODEL_LABELS` in `update_site.py`. Arms in `DROPPED` are
-excluded to stay consistent with Figure 2 of the paper.
+A refresh run through the private pipeline needs nothing here: the arm's entry
+in the pipeline roster (`Results/pipeline/config.py` `ARMS`) carries its display
+name, and the pipeline hands it to `MODEL_LABELS` / `BETTING_LABELS` before
+calling `update_site.py`. Run by hand, `update_site.py` stops on an arm it has
+no label for rather than publish its raw id -- add the arm to those two tables.
+Arms in `DROPPED` are excluded to stay consistent with Figure 2 of the paper;
+adding an arm there is the one decision the pipeline cannot make for you.
 
 ### Adding a figure
 

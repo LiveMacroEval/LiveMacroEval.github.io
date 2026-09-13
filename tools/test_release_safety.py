@@ -281,6 +281,14 @@ def m_theme_period_extra_field(d: Path):
     j["themes"]["periods"][0]["rows"][0]["surprises"] = [0.1, -0.2, 0.3]
     p.write_text(json.dumps(j))
 
+def m_nan_score(d: Path):
+    """A score with no value written as NaN: Python accepts it, browsers do not."""
+    p = d / "data/leaderboard.json"
+    txt = p.read_text()
+    j = json.loads(txt)
+    j["headline"]["rows"][1]["score"] = float("nan")
+    p.write_text(json.dumps(j))
+
 def m_month_panels_per_release(d: Path):
     """leaderboard.json: a 'period' tab per release is a per-release table."""
     p = d / "data/leaderboard.json"
@@ -330,6 +338,7 @@ CASES = [
     ("leaderboard.json: raw value in a period row", m_month_row_extra_field, "unknown key"),
     ("leaderboard.json: a period tab per release", m_month_panels_per_release, "exceeds the 30 cap"),
     ("leaderboard.json: per-field values in a theme row", m_theme_period_extra_field, "unknown key"),
+    ("leaderboard.json: a NaN score",               m_nan_score,           "non-finite number"),
 ]
 
 

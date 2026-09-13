@@ -82,6 +82,26 @@ MODEL_LABELS = {
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
 
+def _num(text) -> float | None:
+    """A score cell as a float, or None when it holds no number.
+
+    The LiveMacro Score (BDRC) needs a realised S&P 500 futures move for each
+    release, and the futures bars are bought after the fact, so the newest
+    releases always sit past their coverage for a while. An arm -- or a whole
+    quarter -- whose every release is in that gap has scored events but an
+    EMPTY BDRC cell. That is "no score yet", not zero, and it must neither crash
+    the refresh nor reach the JSON as NaN (which browsers refuse to parse)."""
+    try:
+        v = float(text)
+    except (TypeError, ValueError):
+        return None
+    return v if math.isfinite(v) else None
+
+
+# arms left off a table because they have no LiveMacro Score yet (printed by main)
+UNSCORED: dict[str, set[str]] = {}
+
+
 def _label(arm: str, table: dict, what: str, table_name: str) -> str:
     """Display name for an arm, or a hard stop.
 
@@ -233,8 +253,12 @@ def read_themes(plots_root: Path, variant: str) -> dict:
                 arm = r["model"]
                 if arm in DROPPED:
                     continue
+                v = _num(r["BDRC"])
+                if v is None:
+                    UNSCORED.setdefault("themes (all quarters)", set()).add(arm)
+                    continue
                 # "or 0.0" collapses a rounded -0.0 to plain 0.0
-                per_model.setdefault(arm, {})[key] = round(float(r["BDRC"]), 3) or 0.0
+                per_model.setdefault(arm, {})[key] = round(v, 3) or 0.0
 
     rows = []
     for arm, by_theme in per_model.items():
@@ -252,15 +276,22 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 
 
 # ---------------------------------------------------------- agent design ----
-# The "Tool and agent design" card: the same base model and live protocol under
-# three configurations, scored on ONE coverage-matched release set so the three
-# are comparable with each other (the overlay's matched_new_arms tables, step 3c
-# of the refresh). Which three configurations the card is about, and the names
-# they are presented under, are editorial -- so they are declared here. Every
-# NUMBER and the window come from the overlay, because until 2026-09-12 they did
-# not: the block was hand-written into leaderboard.json and no refresh touched
-# it, so it stayed frozen on its original window while the tables beside it
-# advanced each month.
+# The "Tool and agent design" card: one base model and live protocol under three
+# configurations, scored on ONE coverage-matched release set so the three are
+# comparable with each other (the overlay's matched_new_arms tables, step 3c of
+# the refresh). Which configurations the card compares, and the names they are
+# presented under, are editorial -- so they are declared here.
+#
+# The card is a FIXED STUDY, not a live table, and a refresh leaves it alone by
+# default. The comparison it describes ended with the roster change of
+# 2026-09-04/05: the Claude Code arms moved to a new base model and the plain
+# control (claude-sonnet-4.5-api) retired. The matched tables keep growing after
+# that -- they anchor on claude-code-multiagent's events and score every other
+# arm on whatever subset it has -- so regenerating the card from a later overlay
+# would publish three scores on DIFFERENT release sets under a caption that says
+# they share one. `--refresh-agent-design` rebuilds it from the overlay, and only
+# when all three rows really do share one complete release set; otherwise it
+# stops and says so.
 AGENT_DESIGN_BASELINE = "consensus baseline"
 AGENT_DESIGN_ROWS = [
     ("claude-code-multiagent", "+ multi-agent team"),
@@ -277,10 +308,20 @@ def read_agent_design(overlay_dir: Path) -> dict:
         if not f.exists():
             sys.exit(f"agent-design table not found:\n  {f}\n"
                      "It is written by the refresh's scoring step (3c, "
-                     "matched_new_arms_comparison). Pass --skip-agent-design to leave the "
-                     "published block untouched when scoring against a frozen overlay.")
+                     "matched_new_arms_comparison). Omit --refresh-agent-design to leave the "
+                     "published block untouched.")
     with bmsc.open() as fh:
-        scored = {r["model"]: float(r["LiveMacro_BDRC_headline"]) for r in csv.DictReader(fh)}
+        table = {r["model"]: r for r in csv.DictReader(fh)}
+    scored = {m: v for m, r in table.items() if (v := _num(r["LiveMacro_BDRC_headline"])) is not None}
+    # the card's claim: one shared, complete release set for every row
+    sets = {arm: (table[arm].get("n_drc_events_headline"), table[arm].get("complete_headline"))
+            for arm, _ in AGENT_DESIGN_ROWS if arm in table}
+    if len(sets) == len(AGENT_DESIGN_ROWS) and (
+            len(set(sets.values())) != 1 or next(iter(sets.values()))[1] != "True"):
+        sys.exit("agent design: the three configurations no longer share one complete release "
+                 f"set in {bmsc.name} ((n events, complete) per arm: {sets}).\n"
+                 "The card is a fixed study (see AGENT_DESIGN_ROWS); leave it as published "
+                 "(omit --refresh-agent-design) or redefine the comparison.")
     rows = [{"name": AGENT_DESIGN_BASELINE, "score": 0.0,
              "note": "0 by construction", "kind": "human"}]
     for arm, name in AGENT_DESIGN_ROWS:
@@ -608,7 +649,11 @@ def read_case_study(results_root: Path) -> list[dict]:
     return panels
 
 
-def _score_row(r: dict) -> dict:
+def _score_row(r: dict, where: str = "headline") -> dict | None:
+    """The published row, or None for an arm with no LiveMacro Score yet (see _num)."""
+    if any(_num(r[c]) is None for c in ("BDRC_point", "BDRC_ci90_lo", "BDRC_ci90_hi")):
+        UNSCORED.setdefault(where, set()).add(r["model"])
+        return None
     # no event count: the site publishes the score and its interval only
     # (user decision 2026-09-03)
     return {
@@ -645,7 +690,9 @@ def read_scores(csv_path: Path, consensus_label: str,
         for r in reader:
             if r["model"] in DROPPED or r["model"] in exclude:
                 continue
-            rows.append(_score_row(r))
+            row = _score_row(r)
+            if row:
+                rows.append(row)
 
     rows.sort(key=lambda x: -x["score"])
     if rows:
@@ -710,7 +757,9 @@ def read_period_scores(period_dir: Path, consensus_label: str,
         for r in reader:
             if r["model"] in DROPPED:
                 continue
-            by_period.setdefault(r["period"], []).append(_score_row(r))
+            row = _score_row(r, r["period"])
+            if row:
+                by_period.setdefault(r["period"], []).append(row)
 
     # the all-period rows, checked against the overlay for every arm the
     # by-period run did not touch
@@ -728,19 +777,25 @@ def read_period_scores(period_dir: Path, consensus_label: str,
             m = r["model"]
             if m not in stale and m in overlay:
                 for k in ("BDRC_point", "n_events"):
-                    if abs(float(r[k]) - float(overlay[m][k])) > 1e-9:
+                    mine, theirs = _num(r[k]), _num(overlay[m][k])
+                    if (mine is None) != (theirs is None) or (
+                            mine is not None and abs(mine - theirs) > 1e-9):
                         sys.exit(f"{all_csv.name}: {m} {k}={r[k]} but the overlay says "
                                  f"{overlay[m][k]} -- by-period run and overlay disagree")
             if m in DROPPED:
                 continue
-            all_rows.append(_score_row(r))
+            row = _score_row(r, "all quarters")
+            if row:
+                all_rows.append(row)
     all_rows.sort(key=lambda x: -x["score"])
     if all_rows:
         all_rows[0]["note"] = "leads the panel"
     all_rows.insert(0, _consensus_row(consensus_label))
 
     months_of = {p["key"]: p["months"] for p in meta.get("periods", [])}
-    keys = sorted(by_period)
+    # a quarter whose every release is past the futures coverage has no scored
+    # arm at all: no tab for it yet (it appears once the bars are in)
+    keys = sorted(k for k in by_period if by_period[k])
     panels = []
     for i, key in enumerate(keys):
         rows = by_period[key]
@@ -775,7 +830,11 @@ def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
     scores: dict[tuple[str, str], dict[str, float]] = {}   # (period, model) -> theme -> BDRC
     with csv_path.open() as fh:
         for r in csv.DictReader(fh):
-            scores.setdefault((r["period"], r["model"]), {})[r["theme"]] = float(r["BDRC_point"])
+            v = _num(r["BDRC_point"])
+            if v is None:
+                UNSCORED.setdefault(f"themes {r['period']}", set()).add(r["model"])
+                continue
+            scores.setdefault((r["period"], r["model"]), {})[r["theme"]] = v
     # cross-check against the theme pipeline's tables
     for key, _label in THEMES:
         table = plots_root / "plots_bloomberg_no_agent" / variant / key / "metric_ranking_table.csv"
@@ -785,7 +844,10 @@ def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
             for r in csv.DictReader(fh):
                 m = r["model"]
                 mine = scores.get(("all", m), {}).get(key)
-                if m in stale or mine is None:
+                if m in stale or mine is None or _num(r["BDRC"]) is None:
+                    if m not in stale and (mine is None) != (_num(r["BDRC"]) is None):
+                        sys.exit(f"themes: {m}/{key} has a score in only one of the by-period "
+                                 f"run ({mine}) and the theme pipeline ({r['BDRC']!r})")
                     continue
                 if abs(mine - float(r["BDRC"])) > 1e-6:
                     sys.exit(f"themes: {m}/{key} by-period {mine:.6f} differs from the theme "
@@ -851,9 +913,10 @@ def main() -> None:
                          % (BETTING_SUBPATH, PAPER_BETTING_DIR))
     ap.add_argument("--skip-themes", action="store_true",
                     help="leave the themes/betting blocks in the JSON untouched")
-    ap.add_argument("--skip-agent-design", action="store_true",
-                    help="leave the agent-design block untouched (needed only when the "
-                         "overlay has no matched_new_arms tables)")
+    ap.add_argument("--refresh-agent-design", action="store_true",
+                    help="rebuild the agent-design card from the overlay's matched_new_arms "
+                         "tables; refuses unless its three rows share one complete release set "
+                         "(default: leave the published fixed study untouched)")
     ap.add_argument("--skip-series", action="store_true",
                     help="leave docs/data/series.json (the line charts) untouched")
     ap.add_argument("--last-updated", default=None,
@@ -894,7 +957,7 @@ def main() -> None:
     if args.window:
         data["headline"]["window"] = args.window
 
-    if not args.skip_agent_design:
+    if args.refresh_agent_design:
         agent = read_agent_design(csv_path.parent)
         data["agent_design"]["window"] = agent["window"]
         data["agent_design"]["rows"] = agent["rows"]
@@ -950,12 +1013,17 @@ def main() -> None:
             print(json.dumps(series, indent=2)[:2000])
         return
 
-    out.write_text(json.dumps(data, indent=2) + "\n")
+    # allow_nan=False: a non-finite number must stop the refresh here, never be
+    # written as NaN (browsers refuse to parse it and the page goes blank)
+    out.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
     print(f"wrote docs/data/leaderboard.json  ({len(data['headline']['rows'])} rows)")
+    for where, arms in sorted(UNSCORED.items()):
+        print(f"  not shown in {where}: {sorted(arms)} -- scored releases, but none inside the "
+              f"S&P 500 futures coverage yet, so no LiveMacro Score")
 
     if series is not None:
         sp = SITE / "data/series.json"
-        sp.write_text(json.dumps(series, separators=(",", ":")) + "\n")
+        sp.write_text(json.dumps(series, separators=(",", ":"), allow_nan=False) + "\n")
         mk = series["betting"]["markets"]
         n_cum = sum(len(s["values"]) for m in mk for s in m["series"])
         n_mon = sum(len(s["values"]) for m in mk for mo in m.get("months", [])

@@ -346,6 +346,14 @@ def _round_ok(v: float, dp: int) -> bool:
     return abs(v - round(v, dp)) < 1e-9
 
 
+def _strict_json(raw: bytes):
+    """json.loads, minus Python's extensions: NaN / Infinity are not JSON, the
+    browser's JSON.parse rejects them, and the page would render nothing."""
+    def refuse(token):
+        raise ValueError(f"non-finite number {token} (not valid JSON)")
+    return json.loads(raw, parse_constant=refuse)
+
+
 def check_series() -> None:
     """series.json: time series are allowed here, but only coarsened ones.
 
@@ -360,8 +368,8 @@ def check_series() -> None:
         fail(f"data/series.json: {len(raw):,} bytes exceeds the "
              f"{SERIES_MAX_BYTES:,} cap")
     try:
-        d = json.loads(raw)
-    except json.JSONDecodeError as e:
+        d = _strict_json(raw)
+    except ValueError as e:
         fail(f"data/series.json is not valid JSON: {e}")
         return
 
@@ -476,8 +484,8 @@ def check_leaderboard() -> None:
     if len(raw) > MAX_JSON_BYTES:
         fail(f"data/leaderboard.json: {len(raw):,} bytes exceeds the {MAX_JSON_BYTES:,} cap")
     try:
-        d = json.loads(raw)
-    except json.JSONDecodeError as e:
+        d = _strict_json(raw)
+    except ValueError as e:
         fail(f"data/leaderboard.json is not valid JSON: {e}")
         return
 
