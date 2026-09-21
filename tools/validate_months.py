@@ -138,9 +138,12 @@ def main() -> int:
              for m in board["betting"]["markets"]}
     specs, run_labels, spec_src = load_spec(raw_root)
     print(f"  segment spec: {spec_src}")
-    # the run's own labels win: an arm added to the roster since this script was
-    # last edited is published under the name the pipeline gave it, not its id
-    labels = dict(BETTING_LABELS, **run_labels)
+    # update_site.py publishes an arm under the site's own name and falls back to
+    # the pipeline's only for an arm the site has never listed; same order here.
+    # (Until 2026-09-20 the run's labels won, so renaming an arm on the site meant
+    # re-running the whole betting step just to refresh the names in its
+    # bet_schedule.json.)
+    labels = dict(run_labels, **BETTING_LABELS)
     label_of = lambda m: labels.get(m, m)
     day = pd.Timedelta(days=1)
     n_curves = 0

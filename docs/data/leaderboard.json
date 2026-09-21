@@ -5,7 +5,7 @@
   "headline": {
     "title": "LiveMacro Score \u2014 headline evaluation",
     "window": "Target reference periods Nov 2025 \u2013 Aug 2026 (official releases Dec 1, 2025 \u2013 Sep 18, 2026)",
-    "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. Each release is scored on the nowcast in force when it came out, and only if that nowcast is less than a day old. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2. Every agent runs at medium reasoning effort; \u201cplug-in\u201d adds the financial-services-plugins tools and \u201cmulti-agent\u201d is a Claude Code or Codex multi-agent team.",
+    "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. Each release is scored on the nowcast in force when it came out, and only if that nowcast is less than a day old. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2.",
     "period_note": "Each quarter tab scores only the releases whose reference month falls in that quarter, with the same metric and 90% parametric-bootstrap CIs as the all-quarters table. Advance GDP counts in the last month of its quarter, and a release that carries fields from two periods counts whole in the period most of its fields belong to. A release an arm reached only with a nowcast more than a day old is dropped for that arm. The newest tab is the quarter in progress.",
     "source": "pipeline/live/0920/3_scores/overlay/ (not redistributed)",
     "rows": [
@@ -17,7 +17,7 @@
         "note": "reference, 0 by construction"
       },
       {
-        "name": "Sonnet 5 multi-agent",
+        "name": "Sonnet 5 w. multi-agent",
         "kind": "llm",
         "score": 0.023,
         "ci": [
@@ -47,7 +47,7 @@
         "note": "retired Aug 2026"
       },
       {
-        "name": "Sonnet 5 plug-in",
+        "name": "Sonnet 5 w. tool",
         "kind": "llm",
         "score": -0.059,
         "ci": [
@@ -74,7 +74,7 @@
           -0.277,
           -0.076
         ],
-        "note": "retired Aug 2026"
+        "note": "retired Jul 2026"
       },
       {
         "name": "ARIMA",
@@ -181,7 +181,7 @@
               -0.217,
               -0.067
             ],
-            "note": "retired Aug 2026"
+            "note": "retired Jul 2026"
           },
           {
             "name": "ARIMA",
@@ -194,7 +194,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "score": -0.521,
             "ci": [
@@ -217,7 +217,7 @@
             "note": "reference, 0 by construction"
           },
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "score": 0.031,
             "ci": [
@@ -227,7 +227,7 @@
             "note": "leads the quarter"
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "score": -0.001,
             "ci": [
@@ -264,7 +264,7 @@
               -0.363,
               -0.089
             ],
-            "note": "retired Aug 2026"
+            "note": "retired Jul 2026"
           },
           {
             "name": "ARIMA",
@@ -330,7 +330,7 @@
             "note": ""
           },
           {
-            "name": "GPT-6 Astra plug-in",
+            "name": "GPT-6 Astra w. tool",
             "kind": "llm",
             "score": 0.074,
             "ci": [
@@ -350,7 +350,7 @@
             "note": ""
           },
           {
-            "name": "GPT-6 Astra multi-agent",
+            "name": "GPT-6 Astra w. multi-agent",
             "kind": "llm",
             "score": 0.04,
             "ci": [
@@ -370,7 +370,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "score": 0.021,
             "ci": [
@@ -380,7 +380,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "score": 0.006,
             "ci": [
@@ -428,7 +428,7 @@
     ],
     "rows": [
       {
-        "name": "Sonnet 5 multi-agent",
+        "name": "Sonnet 5 w. multi-agent",
         "kind": "llm",
         "scores": [
           -0.01,
@@ -458,7 +458,7 @@
         ]
       },
       {
-        "name": "Sonnet 5 plug-in",
+        "name": "Sonnet 5 w. tool",
         "kind": "llm",
         "scores": [
           0.013,
@@ -591,7 +591,7 @@
             ]
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "scores": [
               0.037,
@@ -607,7 +607,7 @@
         "label": "Q2 2026",
         "rows": [
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "scores": [
               0.082,
@@ -673,7 +673,7 @@
         "label": "Q3 2026",
         "rows": [
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "scores": [
               0.0,
@@ -693,7 +693,7 @@
             ]
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "scores": [
               -0.074,
@@ -762,12 +762,12 @@
             "ret": 37.4
           },
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "ret": 30.1
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "ret": -67.8
           }
@@ -782,12 +782,12 @@
             "ret": 88.7
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "ret": 5.2
           },
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "ret": -7.3
           },
@@ -812,7 +812,7 @@
             "ret": 54.5
           },
           {
-            "name": "Sonnet 5 multi-agent",
+            "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
             "ret": 4.8
           },
@@ -822,7 +822,7 @@
             "ret": -20.2
           },
           {
-            "name": "Sonnet 5 plug-in",
+            "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "ret": -30.0
           },
@@ -838,7 +838,7 @@
   "agent_design": {
     "title": "Tool and agent design",
     "window": "Coverage-matched releases, Jul 9 \u2013 Sep 18, 2026.",
-    "note": "Same base model (Sonnet 4.5 until Sep 4, 2026, Sonnet 5 from Sep 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
+    "note": "Same base model (Sonnet 4.5 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
     "rows": [
       {
         "name": "consensus baseline",
@@ -847,10 +847,10 @@
         "kind": "human"
       },
       {
-        "name": "+ multi-agent team",
+        "name": "plain prompt + multi-agent team",
         "score": 0.023,
         "kind": "llm",
-        "model": "Sonnet 5 multi-agent",
+        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5",
         "best": true
       },
       {
@@ -860,10 +860,10 @@
         "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
       },
       {
-        "name": "+ financial plug-in",
+        "name": "plain prompt + financial plug-in",
         "score": -0.013,
         "kind": "llm",
-        "model": "Sonnet 5 plug-in"
+        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
       }
     ]
   },

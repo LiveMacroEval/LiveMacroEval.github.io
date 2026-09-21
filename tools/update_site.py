@@ -76,25 +76,29 @@ MODEL_LABELS = {
     "arima_aic": "ARIMA",
     "gpt-5-search-api-reasoned": "GPT-5 (reasoned)",
     # Short names, by the model the arm runs now plus its configuration (user
-    # decisions 2026-09-20). "plug-in" = the financial-services-plugins tools,
-    # "multi-agent" = a Claude Code / Codex multi-agent team; every one of them
-    # runs at medium reasoning effort. The leaderboard's table note says so once
-    # (docs/data/leaderboard.json headline.note, hand-written like every note).
+    # decisions 2026-09-20). "w. tool" = Anthropic's financial-services plug-ins,
+    # "w. multi-agent" = a Claude Code / Codex multi-agent team; every one of them
+    # runs at medium reasoning effort. The page says so once, in a static
+    # paragraph under the leaderboard (docs/index.html: it carries a link, and the
+    # JSON notes are rendered as plain text).
     "claude-sonnet-4.5-api": "Sonnet 4.5",
     "claude-code-plain": "Sonnet 5",
-    "claude-code-agent": "Sonnet 5 plug-in",
-    "claude-code-multiagent": "Sonnet 5 multi-agent",
+    "claude-code-agent": "Sonnet 5 w. tool",
+    "claude-code-multiagent": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
-    "gpt-6-astra-codex-agent": "GPT-6 Astra plug-in",
-    "gpt-6-astra-codex-multiagent": "GPT-6 Astra multi-agent",
+    "gpt-6-astra-codex-agent": "GPT-6 Astra w. tool",
+    "gpt-6-astra-codex-multiagent": "GPT-6 Astra w. multi-agent",
 }
 # A standing remark under an arm's name, wherever the arm is listed. Used for the
-# arms that no longer run (user decision 2026-09-20). GPT-5 is still nowcasting
-# the August 2026 target and gets its mark once that target is complete -- add
-# it here then.
+# arms that no longer run (user decision 2026-09-20), by the last target month
+# they nowcast: Sonnet 4.5 through August 2026 (last call 2026-09-04), Qwen3-80B
+# through July 2026 (its feed ended 2026-07-27, before any July release came out,
+# which is why it has no row in the Q3 tab while Sonnet 4.5 does). GPT-5 is still
+# nowcasting the August 2026 target and gets its mark once that target is
+# complete -- add it here then.
 MODEL_NOTES = {
     "claude-sonnet-4.5-api": "retired Aug 2026",
-    "qwen3-next-80b-a3b-instruct": "retired Aug 2026",
+    "qwen3-next-80b-a3b-instruct": "retired Jul 2026",
 }
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
@@ -255,11 +259,11 @@ BETTING_LABELS = {
     "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
     "claude-code-plain": "Sonnet 5",
-    "claude-code-agent": "Sonnet 5 plug-in",
-    "claude-code-multiagent": "Sonnet 5 multi-agent",
+    "claude-code-agent": "Sonnet 5 w. tool",
+    "claude-code-multiagent": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
-    "gpt-6-astra-codex-agent": "GPT-6 Astra plug-in",
-    "gpt-6-astra-codex-multiagent": "GPT-6 Astra multi-agent",
+    "gpt-6-astra-codex-agent": "GPT-6 Astra w. tool",
+    "gpt-6-astra-codex-multiagent": "GPT-6 Astra w. multi-agent",
     "bloomberg-consensus": "Bloomberg ECOS consensus",
     "fed-atlanta": "Atlanta Fed GDPNow",
     "fed-newyork": "NY Fed Staff Nowcast",
@@ -398,25 +402,15 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 # MIN_SCORED_RELEASES; otherwise the refresh STOPS and says so
 # (`--keep-agent-design` publishes the card as it stands).
 AGENT_DESIGN_BASELINE = "consensus baseline"
+# Each row is named in full, and all three carry the SAME sub-label -- the base
+# model, word for word as in the caption -- because that is the card's point
+# (user decision 2026-09-20).
 AGENT_DESIGN_ROWS = [
-    ("claude-code-multiagent", "+ multi-agent team"),
-    ("claude-code-agent", "+ financial plug-in"),
+    ("claude-code-multiagent", "plain prompt + multi-agent team"),
+    ("claude-code-agent", "plain prompt + financial plug-in"),
     ("claude-code-plain", "plain prompt (control)"),
 ]
-AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 until Sep 4, 2026, Sonnet 5 from Sep 5"
-
-
-def _succession_label(arm: str, succession: str | None) -> str:
-    """The sub-label of a card row: the arm's name, or for a succession
-    ('a|b@2026-09-05') "A until Sep 4, 2026, then B"."""
-    steps = [t.partition("@") for t in (succession or arm).split("|") if t]
-    if len(steps) < 2:
-        return model_label(arm)
-    text = model_label(steps[0][0])
-    for prev, (a, _at, since) in zip(steps, steps[1:]):
-        last = dt.date.fromisoformat(since) - dt.timedelta(days=1)
-        text += f" until {MONTH_NAMES[last.month - 1]} {last.day}, {last.year}, then {model_label(a)}"
-    return text
+AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
 
 
 def agent_design_note(base_model: str) -> str:
@@ -463,7 +457,7 @@ def read_agent_design(overlay_dir: Path) -> dict:
                      "carries a futures move yet (--keep-agent-design publishes the card as it stands).")
         # "or 0.0" collapses a rounded -0.0 to plain 0.0
         rows.append({"name": name, "score": round(scored[arm], 3) or 0.0, "kind": "llm",
-                     "model": _succession_label(arm, table[arm].get("succession"))})
+                     "model": AGENT_DESIGN_BASE_MODEL})
     # the page numbers the rows as a ranking, so they go out best first (the
     # declared order of AGENT_DESIGN_ROWS only breaks ties); the reference row leads
     rows[1:] = sorted(rows[1:], key=lambda r: -r["score"])

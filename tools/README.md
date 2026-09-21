@@ -210,14 +210,21 @@ be a succession of arms (the plain control: Sonnet 4.5 until 2026-09-04,
 Sonnet 5 since), which its sub-label spells out.
 
 Names are short, by the model the arm runs now plus its configuration: "Sonnet
-4.5", "Sonnet 5", "Sonnet 5 plug-in", "Sonnet 5 multi-agent", "GPT-6 Astra", ...
-What "plug-in" and "multi-agent" stand for, and that every agent runs at medium
-reasoning effort, is said once in the leaderboard's table note (`headline.note`
-in `docs/data/leaderboard.json`, hand-written and carried over like every
-note). `SERIES_COLORS` in `docs/assets/js/main.js` is keyed by display name --
-rename there too, and give a new arm a colour before it reaches the LiveBetting
-charts (an unlisted arm draws grey). `MODEL_NOTES` holds a standing remark shown
-under an arm's name; it marks the arms that no longer run ("retired Aug 2026").
+4.5", "Sonnet 5", "Sonnet 5 w. tool", "Sonnet 5 w. multi-agent", "GPT-6 Astra",
+... What "w. tool" (Anthropic's financial-services plug-ins, linked) and "w.
+multi-agent" stand for, and that every agent runs at medium reasoning effort,
+is said once in a static paragraph under the leaderboard in `docs/index.html`
+(the JSON notes are rendered as plain text, so a link cannot live there, and it
+has to show under the quarter tabs too). `SERIES_COLORS` in
+`docs/assets/js/main.js` is keyed by display name -- rename there too, and give a
+new arm a colour before it reaches the LiveBetting charts (an unlisted arm
+draws grey). `validate_months.py` looks an arm up in this repo's names first and
+falls back to the ones the betting run recorded, the same order `update_site.py`
+uses, so a rename needs no betting re-run. `MODEL_NOTES` holds a standing remark
+shown under an arm's name; it marks the arms that no longer run, by their last
+target month ("retired Aug 2026", "retired Jul 2026"). On the agent-design card
+every row is named in full and carries the same sub-label as the caption's base
+model (`AGENT_DESIGN_BASE_MODEL`).
 Qwen3-235B is one row: the private pipeline scores its export arm and its
 OpenRouter arm as one model, so only the first id reaches the score tables.
 
