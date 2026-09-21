@@ -24,7 +24,7 @@
           0.007,
           0.029
         ],
-        "note": "leads the panel \u00b7 replaced by Sonnet 5 w. multi-agent (retired Aug 2026)"
+        "note": "leads the panel \u00b7 retired Aug 2026 and replaced by Sonnet 5"
       },
       {
         "name": "GPT-5",
@@ -44,7 +44,7 @@
           -0.06,
           -0.03
         ],
-        "note": "replaced by Sonnet 5 (retired Aug 2026)"
+        "note": "retired Aug 2026 and replaced by Sonnet 5"
       },
       {
         "name": "Sonnet 4.5 w. tool",
@@ -54,7 +54,7 @@
           -0.126,
           -0.052
         ],
-        "note": "replaced by Sonnet 5 w. tool (retired Aug 2026)"
+        "note": "retired Aug 2026 and replaced by Sonnet 5"
       },
       {
         "name": "Qwen3-235B",

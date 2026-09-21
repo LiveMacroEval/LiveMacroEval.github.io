@@ -99,14 +99,16 @@ MODEL_LABELS = {
 # all-quarters board lists every arm that ever ran, so it says which have
 # stopped and, for a model line that moved on, what replaced them: the reader
 # should see that Sonnet 5 took over from Sonnet 4.5, not that a model vanished.
-# arm -> (last target month it nowcast, successor arm or None). The note reads
-# "replaced by <successor's name> (retired <month>)", or "retired <month>".
+# arm -> (last target month it nowcast, the model that replaced it or None). The
+# replacement is the MODEL only ("Sonnet 5"), not the configuration: the note
+# would otherwise repeat the row's own name and run over three lines. It reads
+# "retired <month> and replaced by <model>", or "retired <month>".
 # GPT-5 is still nowcasting the August 2026 target; once that target is complete
-# add  "gpt-5-search-api": ("Aug 2026", "gpt-6-astra-codex-plain").
+# add  "gpt-5-search-api": ("Aug 2026", "GPT-6 Astra").
 MODEL_NOTES = {
-    "claude-sonnet-4.5-api": ("Aug 2026", "claude-code-plain"),
-    "claude-code-agent": ("Aug 2026", "claude-code-agent-sonnet5"),
-    "claude-code-multiagent": ("Aug 2026", "claude-code-multiagent-sonnet5"),
+    "claude-sonnet-4.5-api": ("Aug 2026", "Sonnet 5"),
+    "claude-code-agent": ("Aug 2026", "Sonnet 5"),
+    "claude-code-multiagent": ("Aug 2026", "Sonnet 5"),
     "qwen3-next-80b-a3b-instruct": ("Jul 2026", None),    # its feed ended 2026-07-27; no successor
 }
 
@@ -114,8 +116,8 @@ MODEL_NOTES = {
 def model_note(arm: str) -> str:
     if arm not in MODEL_NOTES:
         return ""
-    month, successor = MODEL_NOTES[arm]
-    return f"replaced by {model_label(successor)} (retired {month})" if successor else f"retired {month}"
+    month, replacement = MODEL_NOTES[arm]
+    return f"retired {month} and replaced by {replacement}" if replacement else f"retired {month}"
 
 
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
