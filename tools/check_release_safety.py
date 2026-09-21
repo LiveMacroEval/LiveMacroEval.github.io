@@ -154,6 +154,9 @@ ROW = {"name": S, "kind": S, "score": N, "ci": "ci", "events?": "int_or_null",
 # coverage-matched event set. No CI of their own.
 AGENT_ROW = {"name": S, "score": N, "kind?": S, "best?": bool, "note?": S,
              "model?": S, "events?": "int_or_null"}
+# One tab of the agent-design card per model line (Claude Sonnet, GPT-6 Astra):
+# the same three aggregate rows on that line's own coverage-matched set.
+AGENT_TAB = {"key": S, "label": S, "window": S, "note": S, "rows": [AGENT_ROW]}
 # One aggregate LiveMacro Score per model per theme -- 4 numbers a row, the same
 # shape as the paper's Figure 3 panels. No per-release value can ride along.
 THEME_ROW = {"name": S, "kind": S, "scores": [N]}
@@ -172,7 +175,7 @@ SCHEMA = {
     "next_update": "date",
     "headline": {"title": S, "window": S, "note": S, "period_note?": S, "source": S,
                  "rows": [ROW], "periods?": [PERIOD_PANEL]},
-    "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW]},
+    "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW], "tabs?": [AGENT_TAB]},
     "themes": {"title": S, "window": S, "note": S, "period_note?": S,
                "columns": [S], "rows": [THEME_ROW], "periods?": [THEME_PERIOD_PANEL]},
     "betting": {"title": S, "window": S, "note": S,

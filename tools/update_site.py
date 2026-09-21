@@ -85,8 +85,8 @@ MODEL_LABELS = {
     "claude-code-plain": "Sonnet 5",
     # the Claude Code agent arms changed model under one server arm id; the private
     # pipeline splits them at the switch (2026-09-04), so each model is its own arm
-    "claude-code-agent": "Sonnet 4.6 w. tool",
-    "claude-code-multiagent": "Sonnet 4.6 w. multi-agent",
+    "claude-code-agent": "Sonnet 4.5 w. tool",
+    "claude-code-multiagent": "Sonnet 4.5 w. multi-agent",
     "claude-code-agent-sonnet5": "Sonnet 5 w. tool",
     "claude-code-multiagent-sonnet5": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
@@ -97,8 +97,8 @@ MODEL_LABELS = {
 # 2026-09-20): it marks the arms that no longer run. A quarter tab needs none --
 # a retired arm simply is not in the tabs after its last quarter -- but the
 # all-quarters board lists every arm that ever ran, so it says which have
-# stopped, by the last target month they nowcast: Sonnet 4.5 and the two Sonnet
-# 4.6 agent arms through August 2026 (last calls 2026-09-03/04, when the Claude
+# stopped, by the last target month they nowcast: Sonnet 4.5 and its two agent
+# arms through August 2026 (last calls 2026-09-03/04, when the Claude
 # line moved to Sonnet 5), Qwen3-80B through July 2026 (its feed ended
 # 2026-07-27, before any July release came out). GPT-5 is still nowcasting the
 # August 2026 target and gets its mark once that target is complete -- add it
@@ -270,8 +270,8 @@ BETTING_LABELS = {
     "claude-code-plain": "Sonnet 5",
     # the Claude Code agent arms changed model under one server arm id; the private
     # pipeline splits them at the switch (2026-09-04), so each model is its own arm
-    "claude-code-agent": "Sonnet 4.6 w. tool",
-    "claude-code-multiagent": "Sonnet 4.6 w. multi-agent",
+    "claude-code-agent": "Sonnet 4.5 w. tool",
+    "claude-code-multiagent": "Sonnet 4.5 w. multi-agent",
     "claude-code-agent-sonnet5": "Sonnet 5 w. tool",
     "claude-code-multiagent-sonnet5": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
@@ -400,7 +400,7 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 #
 # The three are the Claude line's configurations: the plain prompt (the control),
 # the same with the financial plug-in, and the multi-agent team. The whole line
-# moved from Sonnet 4.5 / 4.6 to Sonnet 5 together on 2026-09-04/05, so the card
+# moved from Sonnet 4.5 to Sonnet 5 together on 2026-09-04/05, so the card
 # runs over its whole history (user decision 2026-09-20): a row is a SUCCESSION
 # of arms -- the control was the API arm claude-sonnet-4.5-api until it retired
 # and is claude-code-plain since -- and takes each release from the arm in force
@@ -417,15 +417,21 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 AGENT_DESIGN_BASELINE = "consensus baseline"
 # Each row is named in full, and all three carry the SAME sub-label -- the base
 # model, word for word as in the caption -- because that is the card's point
-# (user decision 2026-09-20).
-AGENT_DESIGN_ROWS = [
-    ("claude-code-multiagent-sonnet5", "plain prompt + multi-agent team"),
-    ("claude-code-agent-sonnet5", "plain prompt + financial plug-in"),
-    ("claude-code-plain", "plain prompt (control)"),
+# (user decision 2026-09-20). The card has one tab per model line; the first is
+# also written to the block's top level, which is what it held before the tabs.
+AGENT_DESIGN_STUDIES = [
+    {"key": "claude", "label": "Claude Sonnet",
+     "rows": [("claude-code-multiagent-sonnet5", "plain prompt + multi-agent team"),
+              ("claude-code-agent-sonnet5", "plain prompt + financial plug-in"),
+              ("claude-code-plain", "plain prompt (control)")],
+     "base_model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"},
+    # GPT-6 Astra through Codex, on its own newest results (live since 2026-09-05/07)
+    {"key": "codex", "label": "GPT-6 Astra",
+     "rows": [("gpt-6-astra-codex-multiagent", "plain prompt + multi-agent team"),
+              ("gpt-6-astra-codex-agent", "plain prompt + financial plug-in"),
+              ("gpt-6-astra-codex-plain", "plain prompt (control)")],
+     "base_model": "GPT-6 Astra"},
 ]
-# before the switch the plain control ran Sonnet 4.5 and the two agent
-# configurations Sonnet 4.6; all three run Sonnet 5 since
-AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
 
 
 def agent_design_note(base_model: str) -> str:
@@ -435,12 +441,19 @@ def agent_design_note(base_model: str) -> str:
 
 
 def read_agent_design(overlay_dir: Path) -> dict:
-    """Rows and window for the agent-design card, from the coverage-matched tables."""
-    bmsc = overlay_dir / "agent_design_bmsc.csv"
-    events = overlay_dir / "agent_design_events.csv"
-    if not bmsc.exists() and not events.exists():        # a build before 2026-09-13
-        bmsc = overlay_dir / "matched_new_arms_bmsc.csv"
-        events = overlay_dir / "matched_new_arms_events.csv"
+    """The agent-design card: one tab per study of AGENT_DESIGN_STUDIES, and the first
+    tab's window / rows / note repeated at the top level."""
+    tabs = [dict(key=st["key"], label=st["label"], **_read_agent_study(overlay_dir, st))
+            for st in AGENT_DESIGN_STUDIES]
+    first = tabs[0]
+    return {"window": first["window"], "rows": first["rows"], "note": first["note"], "tabs": tabs}
+
+
+def _read_agent_study(overlay_dir: Path, study: dict) -> dict:
+    """Rows and window for one study, from its coverage-matched tables."""
+    study_rows, base_model = study["rows"], study["base_model"]
+    bmsc = overlay_dir / f"agent_design_{study['key']}_bmsc.csv"
+    events = overlay_dir / f"agent_design_{study['key']}_events.csv"
     for f in (bmsc, events):
         if not f.exists():
             sys.exit(f"agent-design table not found:\n  {f}\n"
@@ -451,30 +464,30 @@ def read_agent_design(overlay_dir: Path) -> dict:
     scored = {m: v for m, r in table.items() if (v := _num(r["LiveMacro_BDRC_headline"])) is not None}
     # the card's claim: one shared, complete release set for every row
     sets = {arm: (table[arm].get("n_drc_events_headline"), table[arm].get("complete_headline"))
-            for arm, _ in AGENT_DESIGN_ROWS if arm in table}
-    if len(sets) == len(AGENT_DESIGN_ROWS) and (
+            for arm, _ in study_rows if arm in table}
+    if len(sets) == len(study_rows) and (
             len(set(sets.values())) != 1 or next(iter(sets.values()))[1] != "True"):
         sys.exit("agent design: the three configurations do not share one complete release "
                  f"set in {bmsc.name} ((n events, complete) per arm: {sets}).\n"
-                 "The card's claim is one shared set (see AGENT_DESIGN_ROWS); leave it as published "
+                 "The card's claim is one shared set (see AGENT_DESIGN_STUDIES); leave it as published "
                  "(--keep-agent-design) or redefine the comparison.")
     shared = min((int(_num(n) or 0) for n, _ in sets.values()), default=0)
     if sets and shared < MIN_SCORED_RELEASES:
-        sys.exit(f"agent design: the shared release set holds {shared} scored releases, fewer than "
-                 f"the {MIN_SCORED_RELEASES} an arm needs to be published (MIN_SCORED_RELEASES). "
+        sys.exit(f"agent design ({study['key']}): the shared release set holds {shared} scored releases, "
+                 f"fewer than the {MIN_SCORED_RELEASES} an arm needs to be published (MIN_SCORED_RELEASES). "
                  "Pass --keep-agent-design to leave the card as published until it does.")
     rows = [{"name": AGENT_DESIGN_BASELINE, "score": 0.0,
              "note": "0 by construction", "kind": "human"}]
-    for arm, name in AGENT_DESIGN_ROWS:
+    for arm, name in study_rows:
         if arm not in scored:
             sys.exit(f"agent design: {arm} has no LiveMacro Score in {bmsc.name}. Either it left "
-                     "the roster (update AGENT_DESIGN_ROWS), or no release of the study's window "
+                     "the roster (update AGENT_DESIGN_STUDIES), or no release of the study's window "
                      "carries a futures move yet (--keep-agent-design publishes the card as it stands).")
         # "or 0.0" collapses a rounded -0.0 to plain 0.0
         rows.append({"name": name, "score": round(scored[arm], 3) or 0.0, "kind": "llm",
-                     "model": AGENT_DESIGN_BASE_MODEL})
+                     "model": base_model})
     # the page numbers the rows as a ranking, so they go out best first (the
-    # declared order of AGENT_DESIGN_ROWS only breaks ties); the reference row leads
+    # declared order only breaks ties); the reference row leads
     rows[1:] = sorted(rows[1:], key=lambda r: -r["score"])
     rows[1]["best"] = True
 
@@ -488,7 +501,7 @@ def read_agent_design(overlay_dir: Path) -> dict:
             if lo.year == hi.year else
             f"{MONTH_NAMES[lo.month - 1]} {lo.day}, {lo.year} – {MONTH_NAMES[hi.month - 1]} {hi.day}, {hi.year}")
     return {"window": f"Coverage-matched releases, {span}.", "rows": rows,
-            "note": agent_design_note(AGENT_DESIGN_BASE_MODEL)}
+            "note": agent_design_note(base_model)}
 
 
 def read_betting(betting_dir: Path) -> list[dict]:
@@ -1143,6 +1156,7 @@ def main() -> None:
         data["agent_design"]["window"] = agent["window"]
         data["agent_design"]["rows"] = agent["rows"]
         data["agent_design"]["note"] = agent["note"]
+        data["agent_design"]["tabs"] = agent["tabs"]
 
     if not args.skip_themes:
         theme_root = args.results_root / (args.theme_plots or PAPER_THEME_PLOTS)

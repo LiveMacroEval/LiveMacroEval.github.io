@@ -17,7 +17,7 @@
         "note": "reference, 0 by construction"
       },
       {
-        "name": "Sonnet 4.6 w. multi-agent",
+        "name": "Sonnet 4.5 w. multi-agent",
         "kind": "llm",
         "score": 0.018,
         "ci": [
@@ -47,7 +47,7 @@
         "note": "retired Aug 2026"
       },
       {
-        "name": "Sonnet 4.6 w. tool",
+        "name": "Sonnet 4.5 w. tool",
         "kind": "llm",
         "score": -0.08,
         "ci": [
@@ -194,7 +194,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "score": -0.521,
             "ci": [
@@ -217,7 +217,7 @@
             "note": "reference, 0 by construction"
           },
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "score": 0.031,
             "ci": [
@@ -227,7 +227,7 @@
             "note": "leads the quarter"
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "score": -0.001,
             "ci": [
@@ -390,7 +390,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "score": 0.01,
             "ci": [
@@ -400,7 +400,7 @@
             "note": ""
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "score": -0.032,
             "ci": [
@@ -448,7 +448,7 @@
     ],
     "rows": [
       {
-        "name": "Sonnet 4.6 w. multi-agent",
+        "name": "Sonnet 4.5 w. multi-agent",
         "kind": "llm",
         "scores": [
           -0.009,
@@ -478,7 +478,7 @@
         ]
       },
       {
-        "name": "Sonnet 4.6 w. tool",
+        "name": "Sonnet 4.5 w. tool",
         "kind": "llm",
         "scores": [
           0.014,
@@ -611,7 +611,7 @@
             ]
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "scores": [
               0.037,
@@ -627,7 +627,7 @@
         "label": "Q2 2026",
         "rows": [
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "scores": [
               0.082,
@@ -693,7 +693,7 @@
         "label": "Q3 2026",
         "rows": [
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "scores": [
               0.0,
@@ -723,7 +723,7 @@
             ]
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "scores": [
               -0.074,
@@ -802,12 +802,12 @@
             "ret": 37.4
           },
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "ret": 30.1
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "ret": -67.8
           }
@@ -822,12 +822,12 @@
             "ret": 88.7
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "ret": 2.7
           },
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "ret": -11.9
           },
@@ -857,12 +857,12 @@
             "ret": -20.2
           },
           {
-            "name": "Sonnet 4.6 w. multi-agent",
+            "name": "Sonnet 4.5 w. multi-agent",
             "kind": "llm",
             "ret": -29.4
           },
           {
-            "name": "Sonnet 4.6 w. tool",
+            "name": "Sonnet 4.5 w. tool",
             "kind": "llm",
             "ret": -47.1
           },
@@ -878,7 +878,7 @@
   "agent_design": {
     "title": "Tool and agent design",
     "window": "Coverage-matched releases, Jul 9 \u2013 Sep 18, 2026.",
-    "note": "Same base model (Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
+    "note": "Same base model (Sonnet 4.5 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
     "rows": [
       {
         "name": "consensus baseline",
@@ -890,20 +890,88 @@
         "name": "plain prompt + multi-agent team",
         "score": 0.023,
         "kind": "llm",
-        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5",
+        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5",
         "best": true
       },
       {
         "name": "plain prompt (control)",
         "score": 0.002,
         "kind": "llm",
-        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
+        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
       },
       {
         "name": "plain prompt + financial plug-in",
         "score": -0.013,
         "kind": "llm",
-        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
+        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+      }
+    ],
+    "tabs": [
+      {
+        "key": "claude",
+        "label": "Claude Sonnet",
+        "window": "Coverage-matched releases, Jul 9 \u2013 Sep 18, 2026.",
+        "rows": [
+          {
+            "name": "consensus baseline",
+            "score": 0.0,
+            "note": "0 by construction",
+            "kind": "human"
+          },
+          {
+            "name": "plain prompt + multi-agent team",
+            "score": 0.023,
+            "kind": "llm",
+            "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5",
+            "best": true
+          },
+          {
+            "name": "plain prompt (control)",
+            "score": 0.002,
+            "kind": "llm",
+            "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+          },
+          {
+            "name": "plain prompt + financial plug-in",
+            "score": -0.013,
+            "kind": "llm",
+            "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+          }
+        ],
+        "note": "Same base model (Sonnet 4.5 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other."
+      },
+      {
+        "key": "codex",
+        "label": "GPT-6 Astra",
+        "window": "Coverage-matched releases, Sep 10 \u2013 Sep 18, 2026.",
+        "rows": [
+          {
+            "name": "consensus baseline",
+            "score": 0.0,
+            "note": "0 by construction",
+            "kind": "human"
+          },
+          {
+            "name": "plain prompt + financial plug-in",
+            "score": 0.074,
+            "kind": "llm",
+            "model": "GPT-6 Astra",
+            "best": true
+          },
+          {
+            "name": "plain prompt (control)",
+            "score": 0.064,
+            "kind": "llm",
+            "model": "GPT-6 Astra"
+          },
+          {
+            "name": "plain prompt + multi-agent team",
+            "score": 0.04,
+            "kind": "llm",
+            "model": "GPT-6 Astra"
+          }
+        ],
+        "note": "Same base model (GPT-6 Astra) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other."
       }
     ]
   },

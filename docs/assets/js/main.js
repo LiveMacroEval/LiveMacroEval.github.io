@@ -160,17 +160,33 @@ function agentRow(r, rank, isRef, isLead, max) {
 function renderAgentDesign(a) {
   const body = byId('ad-body');
   if (!body || !a) return;
-  const max = Math.max(...a.rows.map(r => Math.abs(r.score))) || 1;
-  const html = [`<tr class="grouphdr"><td colspan="4">${esc(a.window)}</td></tr>`];
-  let rank = 0;
-  for (const r of a.rows) {
-    const isRef = r.kind === 'human';
-    if (!isRef) rank++;
-    html.push(agentRow(r, rank, isRef, !!r.best, max));
+  // one tab per model line (Claude Sonnet, GPT-6 Astra); a block without tabs is one view
+  const views = (a.tabs && a.tabs.length) ? a.tabs
+    : [{ key: 'all', label: '', window: a.window, note: a.note, rows: a.rows }];
+  let active = views[0].key;
+  const tabs = byId('ad-tabs');
+
+  function draw() {
+    const v = views.find(x => x.key === active) || views[0];
+    const max = Math.max(...v.rows.map(r => Math.abs(r.score))) || 1;
+    const html = [`<tr class="grouphdr"><td colspan="4">${esc(v.window)}</td></tr>`];
+    let rank = 0;
+    for (const r of v.rows) {
+      const isRef = r.kind === 'human';
+      if (!isRef) rank++;
+      html.push(agentRow(r, rank, isRef, !!r.best, max));
+    }
+    body.innerHTML = html.join('');
+    const note = byId('ad-note');
+    if (note) note.textContent = v.note;
   }
-  body.innerHTML = html.join('');
-  const note = byId('ad-note');
-  if (note) note.textContent = a.note;
+  function pick(key) {
+    active = key;
+    if (tabs) tabStrip(tabs, views, active, pick);
+    draw();
+  }
+  if (tabs && views.length > 1) tabStrip(tabs, views, active, pick);
+  draw();
 }
 
 /* Models down the side, themes across the top. Tabbed like the leaderboard:
@@ -268,11 +284,11 @@ const SERIES_COLORS = {
   'Sonnet 4.5': 'var(--warm)',
   'Qwen3-235B': 'var(--s-purple)',
   'Qwen3-80B': 'var(--s-slate)',
-  'Sonnet 4.6 w. multi-agent': 'var(--s-gold)',
+  'Sonnet 4.5 w. multi-agent': 'var(--s-gold)',
   'GPT-5 (reasoned)': 'var(--s-teal-lt)',
   // the pipeline draws this arm in a pale apricot that has no contrast on
   // white, and purple and slate are Qwen's, which shares these charts
-  'Sonnet 4.6 w. tool': 'var(--s-rose)',
+  'Sonnet 4.5 w. tool': 'var(--s-rose)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 

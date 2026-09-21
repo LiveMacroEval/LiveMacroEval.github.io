@@ -225,10 +225,11 @@ under an arm's name on the all-quarters board only; it marks the arms that no
 longer run, by their last target month ("retired Aug 2026", "retired Jul
 2026") -- a quarter tab needs none, a retired arm is simply absent from the tabs
 after its last quarter. A model switch makes a new arm: the private pipeline
-splits the two Claude Code agent arms at 2026-09-04, so "Sonnet 4.6 w. tool" /
-"w. multi-agent" end there and "Sonnet 5 w. tool" / "w. multi-agent" start. On the agent-design card
-every row is named in full and carries the same sub-label as the caption's base
-model (`AGENT_DESIGN_BASE_MODEL`).
+splits the two Claude Code agent arms at 2026-09-04, so "Sonnet 4.5 w. tool" /
+"w. multi-agent" end there and "Sonnet 5 w. tool" / "w. multi-agent" start. The
+agent-design card has one tab per model line (`AGENT_DESIGN_STUDIES`: Claude
+Sonnet over its whole history, GPT-6 Astra on its own newest results); the
+first tab is also written to the block's top level.
 Qwen3-235B is one row: the private pipeline scores its export arm and its
 OpenRouter arm as one model, so only the first id reaches the score tables.
 
