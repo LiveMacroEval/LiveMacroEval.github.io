@@ -4,8 +4,8 @@
   "next_update": "2026-10-01",
   "headline": {
     "title": "LiveMacro Score \u2014 headline evaluation",
-    "window": "Target reference periods Nov 2025 \u2013 Aug 2026 (official releases Dec 1, 2025 \u2013 Sep 18, 2026)",
-    "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs. Each release is scored on the nowcast in force when it came out, and only if that nowcast is less than a day old. The paper's frozen window (Nov 2025 - Mar 2026) is a subset of this one, so these numbers differ from Figure 2.",
+    "window": "Models with more than 10 scored releases \u00b7 target reference periods Nov 2025 \u2013 Aug 2026 (official releases Dec 1, 2025 \u2013 Sep 18, 2026)",
+    "note": "Live board. Higher is better. 0.000 = ties the Bloomberg ECOS professional consensus; +1 = perfectly anticipates announcement-window equity returns. Brackets are 90% parametric-bootstrap CIs.",
     "period_note": "Each quarter tab scores only the releases whose reference month falls in that quarter, with the same metric and 90% parametric-bootstrap CIs as the all-quarters table. Advance GDP counts in the last month of its quarter, and a release that carries fields from two periods counts whole in the period most of its fields belong to. A release an arm reached only with a nowcast more than a day old is dropped for that arm. The newest tab is the quarter in progress.",
     "source": "pipeline/live/0920/3_scores/overlay/ (not redistributed)",
     "rows": [
@@ -24,7 +24,7 @@
           0.007,
           0.029
         ],
-        "note": "leads the panel \u00b7 retired Aug 2026"
+        "note": "leads the panel \u00b7 replaced by Sonnet 5 w. multi-agent (retired Aug 2026)"
       },
       {
         "name": "GPT-5",
@@ -44,7 +44,7 @@
           -0.06,
           -0.03
         ],
-        "note": "retired Aug 2026"
+        "note": "replaced by Sonnet 5 (retired Aug 2026)"
       },
       {
         "name": "Sonnet 4.5 w. tool",
@@ -54,7 +54,7 @@
           -0.126,
           -0.052
         ],
-        "note": "retired Aug 2026"
+        "note": "replaced by Sonnet 5 w. tool (retired Aug 2026)"
       },
       {
         "name": "Qwen3-235B",
@@ -433,7 +433,8 @@
         "covers": "Jul\u2013Aug 2026 so far",
         "current": true
       }
-    ]
+    ],
+    "eligibility": "This board lists a model once it has more than 10 scored releases. Newer models are in the quarter tabs until then: DeepSeek V4 Flash, GPT-6 Astra, GPT-6 Astra w. multi-agent, GPT-6 Astra w. tool, Sonnet 5, Sonnet 5 w. multi-agent, Sonnet 5 w. tool."
   },
   "themes": {
     "title": "LiveMacro Score by theme",

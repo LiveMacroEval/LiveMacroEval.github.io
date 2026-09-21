@@ -93,22 +93,31 @@ MODEL_LABELS = {
     "gpt-6-astra-codex-agent": "GPT-6 Astra w. tool",
     "gpt-6-astra-codex-multiagent": "GPT-6 Astra w. multi-agent",
 }
-# A remark under an arm's name ON THE ALL-QUARTERS BOARD ONLY (user decision
+# A remark under an arm's name ON THE ALL-QUARTERS BOARD ONLY (user decisions
 # 2026-09-20): it marks the arms that no longer run. A quarter tab needs none --
 # a retired arm simply is not in the tabs after its last quarter -- but the
 # all-quarters board lists every arm that ever ran, so it says which have
-# stopped, by the last target month they nowcast: Sonnet 4.5 and its two agent
-# arms through August 2026 (last calls 2026-09-03/04, when the Claude
-# line moved to Sonnet 5), Qwen3-80B through July 2026 (its feed ended
-# 2026-07-27, before any July release came out). GPT-5 is still nowcasting the
-# August 2026 target and gets its mark once that target is complete -- add it
-# here then.
+# stopped and, for a model line that moved on, what replaced them: the reader
+# should see that Sonnet 5 took over from Sonnet 4.5, not that a model vanished.
+# arm -> (last target month it nowcast, successor arm or None). The note reads
+# "replaced by <successor's name> (retired <month>)", or "retired <month>".
+# GPT-5 is still nowcasting the August 2026 target; once that target is complete
+# add  "gpt-5-search-api": ("Aug 2026", "gpt-6-astra-codex-plain").
 MODEL_NOTES = {
-    "claude-sonnet-4.5-api": "retired Aug 2026",
-    "claude-code-agent": "retired Aug 2026",
-    "claude-code-multiagent": "retired Aug 2026",
-    "qwen3-next-80b-a3b-instruct": "retired Jul 2026",
+    "claude-sonnet-4.5-api": ("Aug 2026", "claude-code-plain"),
+    "claude-code-agent": ("Aug 2026", "claude-code-agent-sonnet5"),
+    "claude-code-multiagent": ("Aug 2026", "claude-code-multiagent-sonnet5"),
+    "qwen3-next-80b-a3b-instruct": ("Jul 2026", None),    # its feed ended 2026-07-27; no successor
 }
+
+
+def model_note(arm: str) -> str:
+    if arm not in MODEL_NOTES:
+        return ""
+    month, successor = MODEL_NOTES[arm]
+    return f"replaced by {model_label(successor)} (retired {month})" if successor else f"retired {month}"
+
+
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
 
@@ -338,7 +347,7 @@ def _apply_editorial(path: str) -> None:
     BETTING_LABELS.update(era.get("betting_labels", {}))
     if "model_notes" in era:
         MODEL_NOTES.clear()
-        MODEL_NOTES.update(era["model_notes"])
+        MODEL_NOTES.update({k: tuple(v) for k, v in era["model_notes"].items()})
     if "dropped" in era:
         DROPPED.clear()
         DROPPED.update(era["dropped"])
@@ -827,7 +836,7 @@ def _score_row(r: dict, where: str = "headline") -> dict | None:
         "score": round(float(r["BDRC_point"]), 3),
         "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
         # the standing note (MODEL_NOTES) belongs to the all-quarters board only
-        "note": MODEL_NOTES.get(r["model"], "") if where in ("headline", "all quarters") else "",
+        "note": model_note(r["model"]) if where in ("headline", "all quarters") else "",
     }
 
 
@@ -1150,6 +1159,20 @@ def main() -> None:
     data["headline"]["source"] = f"{SCORING_SUBPATH}/{args.overlay}/ (not redistributed)"
     if args.window:
         data["headline"]["window"] = args.window
+    # The all-quarters board does not list every model: a newcomer is in the quarter
+    # tabs until it has more than ten scored releases. Say so where the reader looks
+    # -- in the table's header -- and name the newcomers under it, so nobody takes the
+    # board for the whole roster (user decision 2026-09-20).
+    data["headline"].pop("eligibility", None)
+    if MIN_SCORED_RELEASES_ALL > 1:
+        line = f"Models with more than {MIN_SCORED_RELEASES_ALL - 1} scored releases"
+        window = data["headline"]["window"]
+        if not window.startswith("Models with more than"):
+            data["headline"]["window"] = f"{line} · {window[0].lower() + window[1:]}"
+        waiting = sorted(model_label(a) for a in TOO_FEW_ALL if a not in DROPPED)
+        data["headline"]["eligibility"] = (
+            f"This board lists a model once it has more than {MIN_SCORED_RELEASES_ALL - 1} scored releases."
+            + (f" Newer models are in the quarter tabs until then: {', '.join(waiting)}." if waiting else ""))
 
     if not args.keep_agent_design:
         agent = read_agent_design(csv_path.parent)

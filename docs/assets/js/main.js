@@ -107,8 +107,10 @@ function periodHeader(p) {
 function renderLeaderboard(h) {
   const body = byId('lb-body');
   if (!body) return;
+  // `eligibility` says who the all-quarters board lists (and names the newcomers
+  // still waiting in the quarter tabs); it belongs to that view only
   const views = [{ key: 'all', label: 'All quarters', rows: h.rows, window: h.window,
-                   note: h.note }]
+                   note: h.eligibility ? `${h.note} ${h.eligibility}` : h.note }]
     .concat((h.periods || []).slice().reverse().map(p => ({
       key: p.key, label: p.current ? `${p.label} · so far` : p.label, rows: p.rows,
       window: periodHeader(p), note: h.period_note || h.note,

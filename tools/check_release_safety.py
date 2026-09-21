@@ -173,7 +173,7 @@ SCHEMA = {
     "_comment?": S,
     "last_updated": "date",
     "next_update": "date",
-    "headline": {"title": S, "window": S, "note": S, "period_note?": S, "source": S,
+    "headline": {"title": S, "window": S, "note": S, "period_note?": S, "eligibility?": S, "source": S,
                  "rows": [ROW], "periods?": [PERIOD_PANEL]},
     "agent_design": {"title": S, "window": S, "note": S, "rows": [AGENT_ROW], "tabs?": [AGENT_TAB]},
     "themes": {"title": S, "window": S, "note": S, "period_note?": S,
