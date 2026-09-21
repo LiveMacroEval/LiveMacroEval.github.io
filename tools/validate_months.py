@@ -41,7 +41,7 @@ RESULTS = Path(os.environ.get("LIVEMACRO_RESULTS", "/home/ruiyi/livemacro/Result
 sys.path.insert(0, str(TOOLS))
 from update_site import (  # noqa: E402
     BETTING_ANCHOR, BETTING_CUMULATIVE_HIDDEN, BETTING_CUTOFF, BETTING_DROPPED,
-    BETTING_LABELS, BETTING_MARKETS, _window_of,
+    BETTING_LABELS, BETTING_MARKETS, BETTING_MIN_DAYS, _window_of,
 )
 
 fails = 0
@@ -214,6 +214,17 @@ def main() -> int:
                 print(f"  note {label}: {model} loses {dropped} (cutoff {cutoff:%Y-%m-%d})")
                 if not wins:
                     del per[model]
+
+        # the hold-off rule, applied to the raw bets: an arm whose kept bets in
+        # this market span less than BETTING_MIN_DAYS is not published here yet
+        for model in list(per):
+            wins = per[model]
+            span = (max(c["last"] for c in wins.values())
+                    - min(c["first"] for c in wins.values())) / day
+            if span < BETTING_MIN_DAYS:
+                print(f"  note {label}: {model} held off ({span:.1f} d of bets, "
+                      f"minimum {BETTING_MIN_DAYS:g})")
+                del per[model]
 
         sm = site_markets.get(key)
         check(sm is not None, f"{label}: published")

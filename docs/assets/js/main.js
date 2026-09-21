@@ -265,14 +265,14 @@ fetch('data/leaderboard.json?v=' + Date.now())
    are dashed, matching the paper convention. */
 const SERIES_COLORS = {
   'GPT-5': 'var(--accent)',
-  'Claude-4.5-Sonnet': 'var(--warm)',
+  'Sonnet 4.5': 'var(--warm)',
   'Qwen3-235B': 'var(--s-purple)',
   'Qwen3-80B': 'var(--s-slate)',
-  'Claude Code multi-agent': 'var(--s-gold)',
+  'Sonnet 5 multi-agent': 'var(--s-gold)',
   'GPT-5 (reasoned)': 'var(--s-teal-lt)',
   // the pipeline draws this arm in a pale apricot that has no contrast on
   // white, and purple and slate are Qwen's, which shares these charts
-  'Claude Code agent': 'var(--s-rose)',
+  'Sonnet 5 plug-in': 'var(--s-rose)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 

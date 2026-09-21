@@ -173,12 +173,17 @@ The betting run must include Qwen
 continuous_returns_20260831_with_qwen`), which also puts Qwen back into the
 February shared start that it binds. The arms that went live in June 2026
 appear everywhere they have data. The tool-and-agent-design comparison is its
-own table (`agent_design` in the JSON), each row naming the arm it is. It is a
-fixed study -- the Claude Code arms changed base model on 2026-09-04 and the
-plain control retired on 2026-09-05 -- so a refresh leaves it as published.
-`update_site.py --refresh-agent-design` rebuilds it from the private
-`matched_new_arms_bmsc.csv`, and refuses unless its three rows share one
-complete release set.
+own table (`agent_design` in the JSON), each row naming the arm it is: one base
+model run three ways, on one shared set of releases. Since the September 2026
+refresh that is the Claude Sonnet 5 trio (`AGENT_DESIGN_ROWS`: the plain prompt
+through Claude Code as the control, the financial plug-in, the multi-agent
+team; all three moved to Sonnet 5 on 2026-09-04/05, where the shared set
+starts). The refresh rebuilds it from the private overlay's
+`agent_design_bmsc.csv` / `agent_design_events.csv` and refuses unless the
+three rows share one complete release set with a LiveMacro Score;
+`--keep-agent-design` publishes the card as it stands. The caption's base-model
+name is `AGENT_DESIGN_BASE_MODEL`. (The card published on 2026-08-25 was the
+earlier study, with the retired `claude-sonnet-4.5-api` as the control.)
 
 ### Adding a model arm
 
@@ -189,6 +194,36 @@ calling `update_site.py`. Run by hand, `update_site.py` stops on an arm it has
 no label for rather than publish its raw id -- add the arm to those two tables.
 Arms in `DROPPED` are excluded to stay consistent with Figure 2 of the paper;
 adding an arm there is the one decision the pipeline cannot make for you.
+
+A new arm is not shown straight away (user decisions 2026-09-20). Counted in
+scored releases -- releases with an S&P 500 futures move -- behind its
+all-quarters LiveMacro Score: under `MIN_SCORED_RELEASES` (5) it is shown
+nowhere; from 5 it is in the quarter tabs; it joins the all-quarters board and
+theme table from `MIN_SCORED_RELEASES_ALL` (11, i.e. more than ten), so a
+newcomer's first releases cannot reorder the long-run table. On the LiveBetting
+charts an arm joins a market once its bets there span `BETTING_MIN_DAYS` (14);
+`validate_months.py` applies the same rule to the raw bets. The run prints who
+is held back and each arm appears by itself on a later refresh. The
+agent-design card needs `MIN_SCORED_RELEASES` in its shared set; its rows are
+published best first, because the page numbers them as a ranking, and a row can
+be a succession of arms (the plain control: Sonnet 4.5 until 2026-09-04,
+Sonnet 5 since), which its sub-label spells out.
+
+Names are short, by the model the arm runs now plus its configuration: "Sonnet
+4.5", "Sonnet 5", "Sonnet 5 plug-in", "Sonnet 5 multi-agent", "GPT-6 Astra", ...
+What "plug-in" and "multi-agent" stand for, and that every agent runs at medium
+reasoning effort, is said once in the leaderboard's table note (`headline.note`
+in `docs/data/leaderboard.json`, hand-written and carried over like every
+note). `SERIES_COLORS` in `docs/assets/js/main.js` is keyed by display name --
+rename there too, and give a new arm a colour before it reaches the LiveBetting
+charts (an unlisted arm draws grey). `MODEL_NOTES` holds a standing remark shown
+under an arm's name; it marks the arms that no longer run ("retired Aug 2026").
+Qwen3-235B is one row: the private pipeline scores its export arm and its
+OpenRouter arm as one model, so only the first id reaches the score tables.
+
+`LIVEMACRO_SITE_EDITORIAL=<json>` pins an earlier publication's names, dropped
+arms and who-is-shown lines at import; only the private pipeline's regression
+sets it.
 
 ### Adding a figure
 

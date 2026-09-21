@@ -248,8 +248,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 }
 .kind.llm   { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .kind.human { color: var(--warm-ink);   border-color: color-mix(in srgb, var(--warm) 45%, var(--border)); }
-/* in the narrow column the name must not wrap; the note under it may */
-.rowname { font-weight: 600; white-space: nowrap; }
+/* arm names say model + configuration ("Sonnet 5 medium + Claude Code multi-agent
+   team") since 2026-09-20, so they wrap; kept on one line they pushed the bar
+   column out of the table */
+.rowname { font-weight: 600; white-space: normal; }
 .rownote { display: block; font-size: 12.5px; color: var(--fg-faint); font-weight: 400; }
 
 /* bar cell */

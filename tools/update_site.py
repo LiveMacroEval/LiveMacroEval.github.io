@@ -71,13 +71,30 @@ SCORING_SUBPATH = "market_surprise_capture_score/step_15_4_live_scoring"
 # code arm -> display name shown on the site
 MODEL_LABELS = {
     "gpt-5-search-api": "GPT-5",
-    "claude-sonnet-4.5-api": "Claude-4.5-Sonnet",
-    "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
+    "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",   # scored together with its OpenRouter successor (one model)
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
     "arima_aic": "ARIMA",
-    "claude-code-agent": "Claude Code agent",
-    "claude-code-multiagent": "Claude Code multi-agent",
     "gpt-5-search-api-reasoned": "GPT-5 (reasoned)",
+    # Short names, by the model the arm runs now plus its configuration (user
+    # decisions 2026-09-20). "plug-in" = the financial-services-plugins tools,
+    # "multi-agent" = a Claude Code / Codex multi-agent team; every one of them
+    # runs at medium reasoning effort. The leaderboard's table note says so once
+    # (docs/data/leaderboard.json headline.note, hand-written like every note).
+    "claude-sonnet-4.5-api": "Sonnet 4.5",
+    "claude-code-plain": "Sonnet 5",
+    "claude-code-agent": "Sonnet 5 plug-in",
+    "claude-code-multiagent": "Sonnet 5 multi-agent",
+    "gpt-6-astra-codex-plain": "GPT-6 Astra",
+    "gpt-6-astra-codex-agent": "GPT-6 Astra plug-in",
+    "gpt-6-astra-codex-multiagent": "GPT-6 Astra multi-agent",
+}
+# A standing remark under an arm's name, wherever the arm is listed. Used for the
+# arms that no longer run (user decision 2026-09-20). GPT-5 is still nowcasting
+# the August 2026 target and gets its mark once that target is complete -- add
+# it here then.
+MODEL_NOTES = {
+    "claude-sonnet-4.5-api": "retired Aug 2026",
+    "qwen3-next-80b-a3b-instruct": "retired Aug 2026",
 }
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
 
@@ -130,9 +147,48 @@ def model_label(arm: str) -> str:
 def betting_label(arm: str) -> str:
     return _label(arm, BETTING_LABELS, "betting label", "BETTING_LABELS")
 
-# Figure 2 in the paper drops the plug-in arm (n=11 outlier); keep the site
-# consistent. GPT-5 (reasoned) is off the site (user decision 2026-09-03).
-DROPPED = {"claude-code-agent", "gpt-5-search-api-reasoned"}
+# GPT-5 (reasoned) is off the site (user decision 2026-09-03). The plug-in arm
+# was dropped with it, to match Figure 2 of the paper (an n=11 outlier then); it
+# is back since 2026-09-20 (user decision: every configuration of the Claude and
+# GPT lines is shown).
+DROPPED = {"gpt-5-search-api-reasoned"}
+
+# Who is shown, by scored releases -- releases with an S&P 500 futures move --
+# behind the arm's all-quarters LiveMacro Score (user decision 2026-09-20):
+#   below MIN_SCORED_RELEASES      nowhere. A new arm's first few releases give a
+#                                  score that is mostly noise.
+#   from MIN_SCORED_RELEASES       in the quarter tabs (leaderboard and themes).
+#   from MIN_SCORED_RELEASES_ALL   also on the ALL-QUARTERS tables, i.e. with more
+#                                  than ten: on 2026-09-20 six arms with 6 releases
+#                                  each would have taken the top six places of a
+#                                  board whose other rows rest on 21 to 103.
+# The rule is per arm, not per tab: an arm past the first line is shown in every
+# quarter tab it has a score in, like the incumbents at the start of a quarter.
+# Below a line the arm is simply not shown there yet; it appears by itself on a
+# later refresh. The agent-design card needs MIN_SCORED_RELEASES from its shared
+# release set.
+MIN_SCORED_RELEASES = 5
+MIN_SCORED_RELEASES_ALL = 11
+TOO_FEW: dict[str, int] = {}        # arm -> scored releases; under the first line
+TOO_FEW_ALL: dict[str, int] = {}    # under the second line only; both filled by main()
+
+
+def _hidden(arm: str, all_quarters: bool = False) -> bool:
+    return arm in DROPPED or arm in TOO_FEW or (all_quarters and arm in TOO_FEW_ALL)
+
+
+def find_too_few(all_csv: Path, minimum: int, below: int | None = None) -> dict[str, int]:
+    """Arms whose all-quarters score rests on fewer than `minimum` scored releases
+    (and, with `below`, on at least `below`: the band between the two lines)."""
+    out: dict[str, int] = {}
+    with all_csv.open() as fh:
+        reader = csv.DictReader(fh)
+        col = "n_drc_events" if "n_drc_events" in (reader.fieldnames or []) else "n_events"
+        for r in reader:
+            n = int(_num(r[col]) or 0)
+            if n < minimum and (below is None or n >= below):
+                out[r["model"]] = n
+    return out
 
 # The arms that went live in June 2026 sit in the all-months table like every
 # other arm (user decision 2026-09-03: the 0825 window covers their whole live
@@ -195,11 +251,15 @@ MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 # The betting CSVs use their own arm names, distinct from the scoring ones.
 BETTING_LABELS = {
     "gpt-5-search-api": "GPT-5",
-    "claude-sonnet-4.5": "Claude-4.5-Sonnet",
+    "claude-sonnet-4.5": "Sonnet 4.5",
     "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
-    "claude-code-agent": "Claude Code agent",
-    "claude-code-multiagent": "Claude Code multi-agent",
+    "claude-code-plain": "Sonnet 5",
+    "claude-code-agent": "Sonnet 5 plug-in",
+    "claude-code-multiagent": "Sonnet 5 multi-agent",
+    "gpt-6-astra-codex-plain": "GPT-6 Astra",
+    "gpt-6-astra-codex-agent": "GPT-6 Astra plug-in",
+    "gpt-6-astra-codex-multiagent": "GPT-6 Astra multi-agent",
     "bloomberg-consensus": "Bloomberg ECOS consensus",
     "fed-atlanta": "Atlanta Fed GDPNow",
     "fed-newyork": "NY Fed Staff Nowcast",
@@ -207,6 +267,16 @@ BETTING_LABELS = {
     "fed-forecast": "Cleveland Fed Nowcast",
     "fed-nowcast": "Chicago Fed CHURN",
 }
+# An arm joins a market's LiveBetting charts, tabs and table once its bets there
+# span at least this many days, first bet to last (user decision 2026-09-20). A
+# week of bets is a near-vertical stub at the right edge of a seven-month chart,
+# and its "final" return sits in the table next to returns earned over the whole
+# window: on 2026-09-20 six arms that had bet on the August CPI market for six
+# days (Sep 5-11) would have taken four of the top six places. Held-off arms are
+# printed by the run and appear by themselves once they pass the line.
+BETTING_MIN_DAYS = 14
+BETTING_HELD: dict[str, dict[str, float]] = {}   # market -> arm -> days so far (printed by main)
+
 # Arms never drawn on the LiveBetting charts. Empty: both Claude Code arms are
 # drawn, and the Qwen arms are handled by the cutoff below rather than dropped.
 BETTING_DROPPED: set[str] = set()
@@ -236,6 +306,34 @@ BETTING_CUTOFF = {
 BETTING_CUMULATIVE_HIDDEN: set[str] = set(BETTING_CUTOFF)
 
 
+def _apply_editorial(path: str) -> None:
+    """Pin the editorial settings of an earlier publication.
+
+    Names, the dropped arms and the who-is-shown lines are decisions that change
+    over time, while the private pipeline's regression must keep reproducing the
+    site exactly as it was published from the 2026-08-25 data. It points
+    LIVEMACRO_SITE_EDITORIAL at a JSON holding that era's settings; they are
+    applied here, at import, so the gates that import this module
+    (validate_months.py) see the same ones. Never set for a real refresh."""
+    global MIN_SCORED_RELEASES, MIN_SCORED_RELEASES_ALL, BETTING_MIN_DAYS
+    era = json.loads(Path(path).read_text())
+    MODEL_LABELS.update(era.get("model_labels", {}))
+    BETTING_LABELS.update(era.get("betting_labels", {}))
+    if "model_notes" in era:
+        MODEL_NOTES.clear()
+        MODEL_NOTES.update(era["model_notes"])
+    if "dropped" in era:
+        DROPPED.clear()
+        DROPPED.update(era["dropped"])
+    MIN_SCORED_RELEASES = era.get("min_scored_releases", MIN_SCORED_RELEASES)
+    MIN_SCORED_RELEASES_ALL = era.get("min_scored_releases_all", MIN_SCORED_RELEASES_ALL)
+    BETTING_MIN_DAYS = era.get("betting_min_days", BETTING_MIN_DAYS)
+
+
+if os.environ.get("LIVEMACRO_SITE_EDITORIAL"):
+    _apply_editorial(os.environ["LIVEMACRO_SITE_EDITORIAL"])
+
+
 def _is_human(arm: str) -> bool:
     return arm.startswith("fed-") or arm == "bloomberg-consensus"
 
@@ -251,7 +349,7 @@ def read_themes(plots_root: Path, variant: str) -> dict:
         with table.open() as fh:
             for r in csv.DictReader(fh):
                 arm = r["model"]
-                if arm in DROPPED:
+                if _hidden(arm, all_quarters=True):
                     continue
                 v = _num(r["BDRC"])
                 if v is None:
@@ -277,39 +375,68 @@ def read_themes(plots_root: Path, variant: str) -> dict:
 
 # ---------------------------------------------------------- agent design ----
 # The "Tool and agent design" card: one base model and live protocol under three
-# configurations, scored on ONE coverage-matched release set so the three are
-# comparable with each other (the overlay's matched_new_arms tables, step 3c of
-# the refresh). Which configurations the card compares, and the names they are
-# presented under, are editorial -- so they are declared here.
+# configurations, scored on ONE shared release set so the three are comparable
+# with each other. Which configurations the card compares, the names they are
+# presented under and the base model the caption names are editorial -- so they
+# are declared here (and, for the refresh pipeline, in its config; step 7 checks
+# the two agree).
 #
-# The card is a FIXED STUDY, not a live table, and a refresh leaves it alone by
-# default. The comparison it describes ended with the roster change of
-# 2026-09-04/05: the Claude Code arms moved to a new base model and the plain
-# control (claude-sonnet-4.5-api) retired. The matched tables keep growing after
-# that -- they anchor on claude-code-multiagent's events and score every other
-# arm on whatever subset it has -- so regenerating the card from a later overlay
-# would publish three scores on DIFFERENT release sets under a caption that says
-# they share one. `--refresh-agent-design` rebuilds it from the overlay, and only
-# when all three rows really do share one complete release set; otherwise it
-# stops and says so.
+# The three are the Claude line's configurations: the plain prompt (the control),
+# the same with the financial plug-in, and the multi-agent team. The whole line
+# moved from Sonnet 4.5 / 4.6 to Sonnet 5 together on 2026-09-04/05, so the card
+# runs over its whole history (user decision 2026-09-20): a row is a SUCCESSION
+# of arms -- the control was the API arm claude-sonnet-4.5-api until it retired
+# and is claude-code-plain since -- and takes each release from the arm in force
+# then. The pipeline writes the shared set (the releases all three reached with
+# a fresh nowcast) and the three scores to the overlay's agent_design_bmsc.csv /
+# agent_design_events.csv, with each row's succession; the older
+# matched_new_arms_* tables are read only when those are absent (the 2026-08-25
+# build). Rows are keyed by the arm now in force.
+#
+# The card is refreshed with everything else, but only when all three rows
+# really do share one complete release set with a LiveMacro Score, of at least
+# MIN_SCORED_RELEASES; otherwise the refresh STOPS and says so
+# (`--keep-agent-design` publishes the card as it stands).
 AGENT_DESIGN_BASELINE = "consensus baseline"
 AGENT_DESIGN_ROWS = [
     ("claude-code-multiagent", "+ multi-agent team"),
     ("claude-code-agent", "+ financial plug-in"),
-    ("claude-sonnet-4.5-api", "plain prompt (control)"),
+    ("claude-code-plain", "plain prompt (control)"),
 ]
+AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 until Sep 4, 2026, Sonnet 5 from Sep 5"
+
+
+def _succession_label(arm: str, succession: str | None) -> str:
+    """The sub-label of a card row: the arm's name, or for a succession
+    ('a|b@2026-09-05') "A until Sep 4, 2026, then B"."""
+    steps = [t.partition("@") for t in (succession or arm).split("|") if t]
+    if len(steps) < 2:
+        return model_label(arm)
+    text = model_label(steps[0][0])
+    for prev, (a, _at, since) in zip(steps, steps[1:]):
+        last = dt.date.fromisoformat(since) - dt.timedelta(days=1)
+        text += f" until {MONTH_NAMES[last.month - 1]} {last.day}, {last.year}, then {model_label(a)}"
+    return text
+
+
+def agent_design_note(base_model: str) -> str:
+    return (f"Same base model ({base_model}) and live protocol, scored on one shared set of "
+            "releases reached by all three with a nowcast less than a day old, so the three "
+            "configurations are comparable with each other.")
 
 
 def read_agent_design(overlay_dir: Path) -> dict:
     """Rows and window for the agent-design card, from the coverage-matched tables."""
-    bmsc = overlay_dir / "matched_new_arms_bmsc.csv"
-    events = overlay_dir / "matched_new_arms_events.csv"
+    bmsc = overlay_dir / "agent_design_bmsc.csv"
+    events = overlay_dir / "agent_design_events.csv"
+    if not bmsc.exists() and not events.exists():        # a build before 2026-09-13
+        bmsc = overlay_dir / "matched_new_arms_bmsc.csv"
+        events = overlay_dir / "matched_new_arms_events.csv"
     for f in (bmsc, events):
         if not f.exists():
             sys.exit(f"agent-design table not found:\n  {f}\n"
-                     "It is written by the refresh's scoring step (3c, "
-                     "matched_new_arms_comparison). Omit --refresh-agent-design to leave the "
-                     "published block untouched.")
+                     "It is written by the refresh's scoring step (3c', run_agent_design). "
+                     "Pass --keep-agent-design to leave the published block untouched.")
     with bmsc.open() as fh:
         table = {r["model"]: r for r in csv.DictReader(fh)}
     scored = {m: v for m, r in table.items() if (v := _num(r["LiveMacro_BDRC_headline"])) is not None}
@@ -318,22 +445,29 @@ def read_agent_design(overlay_dir: Path) -> dict:
             for arm, _ in AGENT_DESIGN_ROWS if arm in table}
     if len(sets) == len(AGENT_DESIGN_ROWS) and (
             len(set(sets.values())) != 1 or next(iter(sets.values()))[1] != "True"):
-        sys.exit("agent design: the three configurations no longer share one complete release "
+        sys.exit("agent design: the three configurations do not share one complete release "
                  f"set in {bmsc.name} ((n events, complete) per arm: {sets}).\n"
-                 "The card is a fixed study (see AGENT_DESIGN_ROWS); leave it as published "
-                 "(omit --refresh-agent-design) or redefine the comparison.")
+                 "The card's claim is one shared set (see AGENT_DESIGN_ROWS); leave it as published "
+                 "(--keep-agent-design) or redefine the comparison.")
+    shared = min((int(_num(n) or 0) for n, _ in sets.values()), default=0)
+    if sets and shared < MIN_SCORED_RELEASES:
+        sys.exit(f"agent design: the shared release set holds {shared} scored releases, fewer than "
+                 f"the {MIN_SCORED_RELEASES} an arm needs to be published (MIN_SCORED_RELEASES). "
+                 "Pass --keep-agent-design to leave the card as published until it does.")
     rows = [{"name": AGENT_DESIGN_BASELINE, "score": 0.0,
              "note": "0 by construction", "kind": "human"}]
     for arm, name in AGENT_DESIGN_ROWS:
         if arm not in scored:
-            sys.exit(f"agent design: {arm} has no row in {bmsc.name}. Either it left the "
-                     "roster (update AGENT_DESIGN_ROWS) or the matched comparison did not "
-                     "cover it this refresh.")
+            sys.exit(f"agent design: {arm} has no LiveMacro Score in {bmsc.name}. Either it left "
+                     "the roster (update AGENT_DESIGN_ROWS), or no release of the study's window "
+                     "carries a futures move yet (--keep-agent-design publishes the card as it stands).")
         # "or 0.0" collapses a rounded -0.0 to plain 0.0
-        rows.append({"name": name, "score": round(scored[arm], 3) or 0.0,
-                     "kind": "llm", "model": model_label(arm)})
-    best = max(rows[1:], key=lambda r: r["score"])
-    best["best"] = True
+        rows.append({"name": name, "score": round(scored[arm], 3) or 0.0, "kind": "llm",
+                     "model": _succession_label(arm, table[arm].get("succession"))})
+    # the page numbers the rows as a ranking, so they go out best first (the
+    # declared order of AGENT_DESIGN_ROWS only breaks ties); the reference row leads
+    rows[1:] = sorted(rows[1:], key=lambda r: -r["score"])
+    rows[1]["best"] = True
 
     with events.open() as fh:
         used = [r for r in csv.DictReader(fh) if str(r["in_headline_window"]).lower() == "true"]
@@ -344,7 +478,8 @@ def read_agent_design(overlay_dir: Path) -> dict:
     span = (f"{MONTH_NAMES[lo.month - 1]} {lo.day} – {MONTH_NAMES[hi.month - 1]} {hi.day}, {hi.year}"
             if lo.year == hi.year else
             f"{MONTH_NAMES[lo.month - 1]} {lo.day}, {lo.year} – {MONTH_NAMES[hi.month - 1]} {hi.day}, {hi.year}")
-    return {"window": f"Coverage-matched releases, {span}.", "rows": rows}
+    return {"window": f"Coverage-matched releases, {span}.", "rows": rows,
+            "note": agent_design_note(AGENT_DESIGN_BASE_MODEL)}
 
 
 def read_betting(betting_dir: Path) -> list[dict]:
@@ -514,6 +649,14 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                     rows_by_arm[arm] = keep
                 else:
                     del rows_by_arm[arm]
+        # an arm whose kept bets span less than BETTING_MIN_DAYS is held off this
+        # market for now (validate_months applies the same rule to the raw bets)
+        for arm in list(rows_by_arm):
+            stamps = [row[5] for row in rows_by_arm[arm]]
+            span = (max(stamps) - min(stamps)).total_seconds() / 86400.0
+            if span < BETTING_MIN_DAYS:
+                BETTING_HELD.setdefault(label, {})[arm] = round(span, 1)
+                del rows_by_arm[arm]
         # segments in chart order, each mapped to its tab window; a window
         # opens at the earliest kept bet any arm places in it
         seg_lo: dict[str, float] = {}
@@ -661,8 +804,13 @@ def _score_row(r: dict, where: str = "headline") -> dict | None:
         "kind": MODEL_KIND.get(r["model"], "llm"),
         "score": round(float(r["BDRC_point"]), 3),
         "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
-        "note": "",
+        "note": MODEL_NOTES.get(r["model"], ""),
     }
+
+
+def _lead(row: dict, text: str) -> None:
+    """Mark the leading row, keeping any standing note it carries."""
+    row["note"] = f"{text} · {row['note']}" if row["note"] else text
 
 
 def _consensus_row(label: str) -> dict:
@@ -688,7 +836,7 @@ def read_scores(csv_path: Path, consensus_label: str,
         if missing:
             sys.exit(f"{csv_path} is missing expected columns: {missing}")
         for r in reader:
-            if r["model"] in DROPPED or r["model"] in exclude:
+            if _hidden(r["model"], all_quarters=True) or r["model"] in exclude:
                 continue
             row = _score_row(r)
             if row:
@@ -696,7 +844,7 @@ def read_scores(csv_path: Path, consensus_label: str,
 
     rows.sort(key=lambda x: -x["score"])
     if rows:
-        rows[0]["note"] = "leads the panel"
+        _lead(rows[0], "leads the panel")
     rows.insert(0, _consensus_row(consensus_label))
     return rows
 
@@ -755,7 +903,7 @@ def read_period_scores(period_dir: Path, consensus_label: str,
         if missing:
             sys.exit(f"{csv_path} is missing expected columns: {missing}")
         for r in reader:
-            if r["model"] in DROPPED:
+            if _hidden(r["model"]):
                 continue
             row = _score_row(r, r["period"])
             if row:
@@ -782,14 +930,14 @@ def read_period_scores(period_dir: Path, consensus_label: str,
                             mine is not None and abs(mine - theirs) > 1e-9):
                         sys.exit(f"{all_csv.name}: {m} {k}={r[k]} but the overlay says "
                                  f"{overlay[m][k]} -- by-period run and overlay disagree")
-            if m in DROPPED:
+            if _hidden(m, all_quarters=True):
                 continue
             row = _score_row(r, "all quarters")
             if row:
                 all_rows.append(row)
     all_rows.sort(key=lambda x: -x["score"])
     if all_rows:
-        all_rows[0]["note"] = "leads the panel"
+        _lead(all_rows[0], "leads the panel")
     all_rows.insert(0, _consensus_row(consensus_label))
 
     months_of = {p["key"]: p["months"] for p in meta.get("periods", [])}
@@ -800,7 +948,7 @@ def read_period_scores(period_dir: Path, consensus_label: str,
     for i, key in enumerate(keys):
         rows = by_period[key]
         rows.sort(key=lambda x: -x["score"])
-        rows[0]["note"] = f"leads the {group}"
+        _lead(rows[0], f"leads the {group}")
         rows.insert(0, _consensus_row(consensus_label))
         panel = {"key": key, "label": _period_label(key), "rows": rows}
         months = months_of.get(key, [])
@@ -856,7 +1004,7 @@ def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
     def rows_for(period: str) -> list[dict]:
         rows = []
         for (p, m), by_theme in scores.items():
-            if p != period or m in DROPPED:
+            if p != period or _hidden(m, all_quarters=(period == "all")):
                 continue
             vals = [by_theme.get(k) for k, _ in THEMES]
             if any(v is None for v in vals):
@@ -880,6 +1028,7 @@ def read_period_themes(period_dir: Path, plots_root: Path, variant: str,
 
 
 def main() -> None:
+    global MIN_SCORED_RELEASES, MIN_SCORED_RELEASES_ALL, BETTING_MIN_DAYS
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--results-root", type=Path, default=DEFAULT_RESULTS,
@@ -913,10 +1062,18 @@ def main() -> None:
                          % (BETTING_SUBPATH, PAPER_BETTING_DIR))
     ap.add_argument("--skip-themes", action="store_true",
                     help="leave the themes/betting blocks in the JSON untouched")
-    ap.add_argument("--refresh-agent-design", action="store_true",
-                    help="rebuild the agent-design card from the overlay's matched_new_arms "
-                         "tables; refuses unless its three rows share one complete release set "
-                         "(default: leave the published fixed study untouched)")
+    ap.add_argument("--keep-agent-design", action="store_true",
+                    help="leave the agent-design card as published. By default it is rebuilt from "
+                         "the overlay's agent_design_* tables, which refuses unless its three rows "
+                         "share one complete release set with a LiveMacro Score")
+    ap.add_argument("--min-scored-releases", type=int, default=MIN_SCORED_RELEASES,
+                    help="an arm is shown (quarter tabs) once its all-quarters LiveMacro Score "
+                         "rests on at least this many scored releases (default: %(default)s)")
+    ap.add_argument("--min-scored-releases-all", type=int, default=MIN_SCORED_RELEASES_ALL,
+                    help="... and on the all-quarters tables from this many (default: %(default)s)")
+    ap.add_argument("--betting-min-days", type=float, default=BETTING_MIN_DAYS,
+                    help="an arm joins a market's LiveBetting charts once its bets there span "
+                         "this many days (default: %(default)s)")
     ap.add_argument("--skip-series", action="store_true",
                     help="leave docs/data/series.json (the line charts) untouched")
     ap.add_argument("--last-updated", default=None,
@@ -941,6 +1098,20 @@ def main() -> None:
     data = json.loads(out.read_text())
 
     csv_path = args.results_root / SCORING_SUBPATH / args.overlay / "bloomberg_final_vs_final_ci.csv"
+    # who is shown at all: counted on the table the site publishes (the by-period
+    # run's all-quarters rows when there is one, else the overlay's)
+    MIN_SCORED_RELEASES = args.min_scored_releases
+    MIN_SCORED_RELEASES_ALL = max(args.min_scored_releases_all, MIN_SCORED_RELEASES)
+    BETTING_MIN_DAYS = args.betting_min_days
+    counted = csv_path
+    if args.periods_dir:
+        all_csv = args.results_root / SCORING_SUBPATH / args.periods_dir / "final_vs_final_all_ci.csv"
+        counted = all_csv if all_csv.exists() else csv_path
+    if counted.exists():
+        TOO_FEW.clear()
+        TOO_FEW.update(find_too_few(counted, MIN_SCORED_RELEASES))
+        TOO_FEW_ALL.clear()
+        TOO_FEW_ALL.update(find_too_few(counted, MIN_SCORED_RELEASES_ALL, below=MIN_SCORED_RELEASES))
     data["headline"]["rows"] = read_scores(csv_path, args.consensus_label)   # overridden below
     data["headline"].pop("months", None)   # the pre-quarter key, never published again
     if args.periods_dir:
@@ -957,10 +1128,11 @@ def main() -> None:
     if args.window:
         data["headline"]["window"] = args.window
 
-    if args.refresh_agent_design:
+    if not args.keep_agent_design:
         agent = read_agent_design(csv_path.parent)
         data["agent_design"]["window"] = agent["window"]
         data["agent_design"]["rows"] = agent["rows"]
+        data["agent_design"]["note"] = agent["note"]
 
     if not args.skip_themes:
         theme_root = args.results_root / (args.theme_plots or PAPER_THEME_PLOTS)
@@ -1017,9 +1189,18 @@ def main() -> None:
     # written as NaN (browsers refuse to parse it and the page goes blank)
     out.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
     print(f"wrote docs/data/leaderboard.json  ({len(data['headline']['rows'])} rows)")
+    for table, line, name in ((TOO_FEW, MIN_SCORED_RELEASES, "not shown yet"),
+                              (TOO_FEW_ALL, MIN_SCORED_RELEASES_ALL, "quarter tabs only, not on the all-quarters tables yet")):
+        held = {a: n for a, n in sorted(table.items()) if a not in DROPPED}
+        if held:
+            print(f"  {name} (fewer than {line} scored releases): "
+                  + ", ".join(f"{a} ({n})" for a, n in held.items()))
+    for market, arms in sorted(BETTING_HELD.items()):
+        print(f"  LiveBetting {market}: held off until their bets span {BETTING_MIN_DAYS:g} days: "
+              + ", ".join(f"{a} ({d:g} d)" for a, d in sorted(arms.items())))
     for where, arms in sorted(UNSCORED.items()):
-        print(f"  not shown in {where}: {sorted(arms)} -- scored releases, but none inside the "
-              f"S&P 500 futures coverage yet, so no LiveMacro Score")
+        print(f"  not shown in {where}: {sorted(arms)} -- no LiveMacro Score there yet (no scored "
+              f"release with an S&P 500 futures move; for a theme table, not one in every theme)")
 
     if series is not None:
         sp = SITE / "data/series.json"
