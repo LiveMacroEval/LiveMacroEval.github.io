@@ -268,11 +268,11 @@ const SERIES_COLORS = {
   'Sonnet 4.5': 'var(--warm)',
   'Qwen3-235B': 'var(--s-purple)',
   'Qwen3-80B': 'var(--s-slate)',
-  'Sonnet 5 w. multi-agent': 'var(--s-gold)',
+  'Sonnet 4.6 w. multi-agent': 'var(--s-gold)',
   'GPT-5 (reasoned)': 'var(--s-teal-lt)',
   // the pipeline draws this arm in a pale apricot that has no contrast on
   // white, and purple and slate are Qwen's, which shares these charts
-  'Sonnet 5 w. tool': 'var(--s-rose)',
+  'Sonnet 4.6 w. tool': 'var(--s-rose)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 

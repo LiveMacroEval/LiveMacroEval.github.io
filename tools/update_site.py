@@ -83,21 +83,30 @@ MODEL_LABELS = {
     # JSON notes are rendered as plain text).
     "claude-sonnet-4.5-api": "Sonnet 4.5",
     "claude-code-plain": "Sonnet 5",
-    "claude-code-agent": "Sonnet 5 w. tool",
-    "claude-code-multiagent": "Sonnet 5 w. multi-agent",
+    # the Claude Code agent arms changed model under one server arm id; the private
+    # pipeline splits them at the switch (2026-09-04), so each model is its own arm
+    "claude-code-agent": "Sonnet 4.6 w. tool",
+    "claude-code-multiagent": "Sonnet 4.6 w. multi-agent",
+    "claude-code-agent-sonnet5": "Sonnet 5 w. tool",
+    "claude-code-multiagent-sonnet5": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
     "gpt-6-astra-codex-agent": "GPT-6 Astra w. tool",
     "gpt-6-astra-codex-multiagent": "GPT-6 Astra w. multi-agent",
 }
-# A standing remark under an arm's name, wherever the arm is listed. Used for the
-# arms that no longer run (user decision 2026-09-20), by the last target month
-# they nowcast: Sonnet 4.5 through August 2026 (last call 2026-09-04), Qwen3-80B
-# through July 2026 (its feed ended 2026-07-27, before any July release came out,
-# which is why it has no row in the Q3 tab while Sonnet 4.5 does). GPT-5 is still
-# nowcasting the August 2026 target and gets its mark once that target is
-# complete -- add it here then.
+# A remark under an arm's name ON THE ALL-QUARTERS BOARD ONLY (user decision
+# 2026-09-20): it marks the arms that no longer run. A quarter tab needs none --
+# a retired arm simply is not in the tabs after its last quarter -- but the
+# all-quarters board lists every arm that ever ran, so it says which have
+# stopped, by the last target month they nowcast: Sonnet 4.5 and the two Sonnet
+# 4.6 agent arms through August 2026 (last calls 2026-09-03/04, when the Claude
+# line moved to Sonnet 5), Qwen3-80B through July 2026 (its feed ended
+# 2026-07-27, before any July release came out). GPT-5 is still nowcasting the
+# August 2026 target and gets its mark once that target is complete -- add it
+# here then.
 MODEL_NOTES = {
     "claude-sonnet-4.5-api": "retired Aug 2026",
+    "claude-code-agent": "retired Aug 2026",
+    "claude-code-multiagent": "retired Aug 2026",
     "qwen3-next-80b-a3b-instruct": "retired Jul 2026",
 }
 MODEL_KIND = {"arima_aic": "econ"}          # everything else defaults to "llm"
@@ -259,8 +268,12 @@ BETTING_LABELS = {
     "qwen3-235b-a22b-instruct-2507": "Qwen3-235B",
     "qwen3-next-80b-a3b-instruct": "Qwen3-80B",
     "claude-code-plain": "Sonnet 5",
-    "claude-code-agent": "Sonnet 5 w. tool",
-    "claude-code-multiagent": "Sonnet 5 w. multi-agent",
+    # the Claude Code agent arms changed model under one server arm id; the private
+    # pipeline splits them at the switch (2026-09-04), so each model is its own arm
+    "claude-code-agent": "Sonnet 4.6 w. tool",
+    "claude-code-multiagent": "Sonnet 4.6 w. multi-agent",
+    "claude-code-agent-sonnet5": "Sonnet 5 w. tool",
+    "claude-code-multiagent-sonnet5": "Sonnet 5 w. multi-agent",
     "gpt-6-astra-codex-plain": "GPT-6 Astra",
     "gpt-6-astra-codex-agent": "GPT-6 Astra w. tool",
     "gpt-6-astra-codex-multiagent": "GPT-6 Astra w. multi-agent",
@@ -406,11 +419,13 @@ AGENT_DESIGN_BASELINE = "consensus baseline"
 # model, word for word as in the caption -- because that is the card's point
 # (user decision 2026-09-20).
 AGENT_DESIGN_ROWS = [
-    ("claude-code-multiagent", "plain prompt + multi-agent team"),
-    ("claude-code-agent", "plain prompt + financial plug-in"),
+    ("claude-code-multiagent-sonnet5", "plain prompt + multi-agent team"),
+    ("claude-code-agent-sonnet5", "plain prompt + financial plug-in"),
     ("claude-code-plain", "plain prompt (control)"),
 ]
-AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+# before the switch the plain control ran Sonnet 4.5 and the two agent
+# configurations Sonnet 4.6; all three run Sonnet 5 since
+AGENT_DESIGN_BASE_MODEL = "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
 
 
 def agent_design_note(base_model: str) -> str:
@@ -798,7 +813,8 @@ def _score_row(r: dict, where: str = "headline") -> dict | None:
         "kind": MODEL_KIND.get(r["model"], "llm"),
         "score": round(float(r["BDRC_point"]), 3),
         "ci": [round(float(r["BDRC_ci90_lo"]), 3), round(float(r["BDRC_ci90_hi"]), 3)],
-        "note": MODEL_NOTES.get(r["model"], ""),
+        # the standing note (MODEL_NOTES) belongs to the all-quarters board only
+        "note": MODEL_NOTES.get(r["model"], "") if where in ("headline", "all quarters") else "",
     }
 
 

@@ -220,9 +220,13 @@ has to show under the quarter tabs too). `SERIES_COLORS` in
 new arm a colour before it reaches the LiveBetting charts (an unlisted arm
 draws grey). `validate_months.py` looks an arm up in this repo's names first and
 falls back to the ones the betting run recorded, the same order `update_site.py`
-uses, so a rename needs no betting re-run. `MODEL_NOTES` holds a standing remark
-shown under an arm's name; it marks the arms that no longer run, by their last
-target month ("retired Aug 2026", "retired Jul 2026"). On the agent-design card
+uses, so a rename needs no betting re-run. `MODEL_NOTES` holds a remark shown
+under an arm's name on the all-quarters board only; it marks the arms that no
+longer run, by their last target month ("retired Aug 2026", "retired Jul
+2026") -- a quarter tab needs none, a retired arm is simply absent from the tabs
+after its last quarter. A model switch makes a new arm: the private pipeline
+splits the two Claude Code agent arms at 2026-09-04, so "Sonnet 4.6 w. tool" /
+"w. multi-agent" end there and "Sonnet 5 w. tool" / "w. multi-agent" start. On the agent-design card
 every row is named in full and carries the same sub-label as the caption's base
 model (`AGENT_DESIGN_BASE_MODEL`).
 Qwen3-235B is one row: the private pipeline scores its export arm and its

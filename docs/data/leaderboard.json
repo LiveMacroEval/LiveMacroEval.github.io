@@ -17,21 +17,21 @@
         "note": "reference, 0 by construction"
       },
       {
-        "name": "Sonnet 5 w. multi-agent",
+        "name": "Sonnet 4.6 w. multi-agent",
         "kind": "llm",
-        "score": 0.023,
+        "score": 0.018,
         "ci": [
-          0.014,
-          0.031
+          0.007,
+          0.029
         ],
-        "note": "leads the panel"
+        "note": "leads the panel \u00b7 retired Aug 2026"
       },
       {
         "name": "GPT-5",
         "kind": "llm",
         "score": -0.005,
         "ci": [
-          -0.029,
+          -0.03,
           0.008
         ],
         "note": ""
@@ -42,19 +42,19 @@
         "score": -0.043,
         "ci": [
           -0.06,
-          -0.031
+          -0.03
         ],
         "note": "retired Aug 2026"
       },
       {
-        "name": "Sonnet 5 w. tool",
+        "name": "Sonnet 4.6 w. tool",
         "kind": "llm",
-        "score": -0.059,
+        "score": -0.08,
         "ci": [
-          -0.097,
-          -0.037
+          -0.126,
+          -0.052
         ],
-        "note": ""
+        "note": "retired Aug 2026"
       },
       {
         "name": "Qwen3-235B",
@@ -72,7 +72,7 @@
         "score": -0.171,
         "ci": [
           -0.277,
-          -0.076
+          -0.077
         ],
         "note": "retired Jul 2026"
       },
@@ -104,8 +104,8 @@
             "kind": "llm",
             "score": -0.027,
             "ci": [
-              -0.067,
-              0.01
+              -0.066,
+              0.009
             ],
             "note": "leads the quarter"
           },
@@ -115,7 +115,7 @@
             "score": -0.064,
             "ci": [
               -0.087,
-              -0.046
+              -0.045
             ],
             "note": ""
           },
@@ -127,7 +127,7 @@
               -0.195,
               -0.099
             ],
-            "note": "retired Aug 2026"
+            "note": ""
           }
         ],
         "covers": "Nov\u2013Dec 2025"
@@ -159,16 +159,16 @@
             "score": 0.005,
             "ci": [
               0.003,
-              0.008
+              0.007
             ],
-            "note": "retired Aug 2026"
+            "note": ""
           },
           {
             "name": "Qwen3-235B",
             "kind": "llm",
             "score": 0.002,
             "ci": [
-              -0.014,
+              -0.013,
               0.014
             ],
             "note": ""
@@ -178,10 +178,10 @@
             "kind": "llm",
             "score": -0.135,
             "ci": [
-              -0.217,
-              -0.067
+              -0.216,
+              -0.069
             ],
-            "note": "retired Jul 2026"
+            "note": ""
           },
           {
             "name": "ARIMA",
@@ -194,12 +194,12 @@
             "note": ""
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
             "score": -0.521,
             "ci": [
-              -0.633,
-              -0.402
+              -0.635,
+              -0.405
             ],
             "note": ""
           }
@@ -217,7 +217,7 @@
             "note": "reference, 0 by construction"
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
             "score": 0.031,
             "ci": [
@@ -227,7 +227,7 @@
             "note": "leads the quarter"
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
             "score": -0.001,
             "ci": [
@@ -244,7 +244,7 @@
               -0.029,
               0.005
             ],
-            "note": "retired Aug 2026"
+            "note": ""
           },
           {
             "name": "GPT-5",
@@ -261,17 +261,17 @@
             "kind": "llm",
             "score": -0.227,
             "ci": [
-              -0.363,
-              -0.089
+              -0.364,
+              -0.092
             ],
-            "note": "retired Jul 2026"
+            "note": ""
           },
           {
             "name": "ARIMA",
             "kind": "econ",
             "score": -0.324,
             "ci": [
-              -0.396,
+              -0.394,
               -0.256
             ],
             "note": ""
@@ -281,8 +281,8 @@
             "kind": "llm",
             "score": -0.326,
             "ci": [
-              -0.482,
-              -0.143
+              -0.479,
+              -0.144
             ],
             "note": ""
           }
@@ -304,8 +304,8 @@
             "kind": "llm",
             "score": 0.207,
             "ci": [
-              -0.007,
-              0.359
+              -0.006,
+              0.362
             ],
             "note": "leads the quarter"
           },
@@ -314,7 +314,7 @@
             "kind": "llm",
             "score": 0.194,
             "ci": [
-              0.142,
+              0.143,
               0.244
             ],
             "note": ""
@@ -335,7 +335,7 @@
             "score": 0.074,
             "ci": [
               0.056,
-              0.091
+              0.092
             ],
             "note": ""
           },
@@ -345,7 +345,7 @@
             "score": 0.064,
             "ci": [
               0.048,
-              0.079
+              0.08
             ],
             "note": ""
           },
@@ -360,32 +360,52 @@
             "note": ""
           },
           {
+            "name": "Sonnet 5 w. tool",
+            "kind": "llm",
+            "score": 0.036,
+            "ci": [
+              0.027,
+              0.044
+            ],
+            "note": ""
+          },
+          {
             "name": "GPT-5",
             "kind": "llm",
             "score": 0.035,
             "ci": [
               0.018,
-              0.05
+              0.049
             ],
             "note": ""
           },
           {
             "name": "Sonnet 5 w. multi-agent",
             "kind": "llm",
-            "score": 0.021,
+            "score": 0.03,
             "ci": [
-              0.012,
-              0.03
+              0.016,
+              0.044
             ],
             "note": ""
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
-            "score": 0.006,
+            "score": 0.01,
             "ci": [
-              -0.001,
-              0.013
+              0.001,
+              0.019
+            ],
+            "note": ""
+          },
+          {
+            "name": "Sonnet 4.6 w. tool",
+            "kind": "llm",
+            "score": -0.032,
+            "ci": [
+              -0.042,
+              -0.022
             ],
             "note": ""
           },
@@ -404,10 +424,10 @@
             "kind": "llm",
             "score": -0.249,
             "ci": [
-              -0.308,
-              -0.191
+              -0.309,
+              -0.189
             ],
-            "note": "retired Aug 2026"
+            "note": ""
           }
         ],
         "covers": "Jul\u2013Aug 2026 so far",
@@ -428,13 +448,13 @@
     ],
     "rows": [
       {
-        "name": "Sonnet 5 w. multi-agent",
+        "name": "Sonnet 4.6 w. multi-agent",
         "kind": "llm",
         "scores": [
-          -0.01,
-          0.051,
-          -0.001,
-          -0.009
+          -0.009,
+          0.036,
+          0.015,
+          0.031
         ]
       },
       {
@@ -458,13 +478,13 @@
         ]
       },
       {
-        "name": "Sonnet 5 w. tool",
+        "name": "Sonnet 4.6 w. tool",
         "kind": "llm",
         "scores": [
-          0.013,
-          -0.15,
-          -0.002,
-          0.011
+          0.014,
+          -0.239,
+          0.003,
+          0.014
         ]
       },
       {
@@ -591,7 +611,7 @@
             ]
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
             "scores": [
               0.037,
@@ -607,7 +627,7 @@
         "label": "Q2 2026",
         "rows": [
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
             "scores": [
               0.082,
@@ -673,13 +693,13 @@
         "label": "Q3 2026",
         "rows": [
           {
-            "name": "Sonnet 5 w. multi-agent",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
             "scores": [
               0.0,
-              0.053,
-              -0.001,
-              -0.028
+              -0.002,
+              0.015,
+              0.044
             ]
           },
           {
@@ -696,10 +716,30 @@
             "name": "Sonnet 5 w. tool",
             "kind": "llm",
             "scores": [
+              -0.024,
+              0.055,
+              0.0,
+              -0.013
+            ]
+          },
+          {
+            "name": "Sonnet 4.6 w. tool",
+            "kind": "llm",
+            "scores": [
               -0.074,
-              0.048,
-              0.001,
-              0.004
+              -0.012,
+              0.007,
+              0.04
+            ]
+          },
+          {
+            "name": "Sonnet 5 w. multi-agent",
+            "kind": "llm",
+            "scores": [
+              -0.047,
+              0.059,
+              0.0,
+              -0.06
             ]
           },
           {
@@ -762,12 +802,12 @@
             "ret": 37.4
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
             "ret": 30.1
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
             "ret": -67.8
           }
@@ -782,14 +822,14 @@
             "ret": 88.7
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. tool",
             "kind": "llm",
-            "ret": 5.2
+            "ret": 2.7
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
-            "ret": -7.3
+            "ret": -11.9
           },
           {
             "name": "GPT-5",
@@ -812,19 +852,19 @@
             "ret": 54.5
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
-            "kind": "llm",
-            "ret": 4.8
-          },
-          {
             "name": "GPT-5",
             "kind": "llm",
             "ret": -20.2
           },
           {
-            "name": "Sonnet 5 w. tool",
+            "name": "Sonnet 4.6 w. multi-agent",
             "kind": "llm",
-            "ret": -30.0
+            "ret": -29.4
+          },
+          {
+            "name": "Sonnet 4.6 w. tool",
+            "kind": "llm",
+            "ret": -47.1
           },
           {
             "name": "Sonnet 4.5",
@@ -838,7 +878,7 @@
   "agent_design": {
     "title": "Tool and agent design",
     "window": "Coverage-matched releases, Jul 9 \u2013 Sep 18, 2026.",
-    "note": "Same base model (Sonnet 4.5 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
+    "note": "Same base model (Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5) and live protocol, scored on one shared set of releases reached by all three with a nowcast less than a day old, so the three configurations are comparable with each other.",
     "rows": [
       {
         "name": "consensus baseline",
@@ -850,20 +890,20 @@
         "name": "plain prompt + multi-agent team",
         "score": 0.023,
         "kind": "llm",
-        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5",
+        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5",
         "best": true
       },
       {
         "name": "plain prompt (control)",
         "score": 0.002,
         "kind": "llm",
-        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
       },
       {
         "name": "plain prompt + financial plug-in",
         "score": -0.013,
         "kind": "llm",
-        "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
+        "model": "Sonnet 4.5 / 4.6 until Sep 4, 2026, then Sonnet 5"
       }
     ]
   },
