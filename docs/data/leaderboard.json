@@ -31,7 +31,7 @@
         "kind": "llm",
         "score": -0.002,
         "ci": [
-          -0.024,
+          -0.025,
           0.009
         ],
         "note": "retired Aug 2026 and replaced by GPT-6 Astra"
@@ -104,7 +104,7 @@
             "kind": "llm",
             "score": -0.027,
             "ci": [
-              -0.066,
+              -0.067,
               0.009
             ],
             "note": "leads the quarter"
@@ -249,10 +249,10 @@
           {
             "name": "GPT-5",
             "kind": "llm",
-            "score": -0.046,
+            "score": -0.047,
             "ci": [
-              -0.079,
-              -0.022
+              -0.081,
+              -0.024
             ],
             "note": ""
           },
@@ -322,10 +322,10 @@
           {
             "name": "Sonnet 5",
             "kind": "llm",
-            "score": 0.122,
+            "score": 0.123,
             "ci": [
-              0.091,
-              0.149
+              0.092,
+              0.15
             ],
             "note": ""
           },
@@ -382,10 +382,10 @@
           {
             "name": "Sonnet 5 w. tool",
             "kind": "llm",
-            "score": 0.046,
+            "score": 0.048,
             "ci": [
-              0.033,
-              0.058
+              0.035,
+              0.06
             ],
             "note": ""
           },
@@ -461,7 +461,7 @@
         "name": "GPT-5",
         "kind": "llm",
         "scores": [
-          0.055,
+          0.052,
           -0.011,
           0.0,
           -0.017
@@ -530,7 +530,7 @@
               0.161,
               -0.036,
               -0.001,
-              -0.108
+              -0.109
             ]
           },
           {
@@ -650,7 +650,7 @@
             "name": "GPT-5",
             "kind": "llm",
             "scores": [
-              0.027,
+              0.018,
               -0.13,
               -0.007,
               0.01
@@ -697,7 +697,7 @@
             "kind": "llm",
             "scores": [
               -0.003,
-              0.064,
+              0.067,
               0.0,
               0.013
             ]
@@ -894,13 +894,13 @@
       },
       {
         "name": "plain prompt (control)",
-        "score": 0.02,
+        "score": 0.021,
         "kind": "llm",
         "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
       },
       {
         "name": "plain prompt + financial plug-in",
-        "score": -0.003,
+        "score": -0.002,
         "kind": "llm",
         "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
       }
@@ -926,13 +926,13 @@
           },
           {
             "name": "plain prompt (control)",
-            "score": 0.02,
+            "score": 0.021,
             "kind": "llm",
             "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
           },
           {
             "name": "plain prompt + financial plug-in",
-            "score": -0.003,
+            "score": -0.002,
             "kind": "llm",
             "model": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
           }
