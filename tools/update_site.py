@@ -103,9 +103,10 @@ MODEL_LABELS = {
 # replacement is the MODEL only ("Sonnet 5"), not the configuration: the note
 # would otherwise repeat the row's own name and run over three lines. It reads
 # "retired <month> and replaced by <model>", or "retired <month>".
-# GPT-5 is still nowcasting the August 2026 target; once that target is complete
-# add  "gpt-5-search-api": ("Aug 2026", "GPT-6 Astra").
+# GPT-5 had no 2026-09 jobs; its August 2026 target completed with the Aug PCE
+# release on 2026-09-30 (added on the 2026-10-01 refresh).
 MODEL_NOTES = {
+    "gpt-5-search-api": ("Aug 2026", "GPT-6 Astra"),
     "claude-sonnet-4.5-api": ("Aug 2026", "Sonnet 5"),
     "claude-code-agent": ("Aug 2026", "Sonnet 5"),
     "claude-code-multiagent": ("Aug 2026", "Sonnet 5"),
@@ -503,7 +504,10 @@ def _read_agent_study(overlay_dir: Path, study: dict) -> dict:
     rows[1]["best"] = True
 
     with events.open() as fh:
-        used = [r for r in csv.DictReader(fh) if str(r["in_headline_window"]).lower() == "true"]
+        used = [r for r in csv.DictReader(fh) if str(r["in_headline_window"]).lower() == "true"
+                # dated by the releases the score counts: those with a futures move
+                # (column written since drop 1001; older tables have none)
+                and str(r.get("has_futures_move", "true")).lower() == "true"]
     if not used:
         sys.exit(f"agent design: no in_headline_window rows in {events.name}")
     lo = min(_parse_ts(r["release_datetime_et"]) for r in used)
