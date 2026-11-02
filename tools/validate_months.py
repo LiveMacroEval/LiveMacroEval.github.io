@@ -41,7 +41,7 @@ RESULTS = Path(os.environ.get("LIVEMACRO_RESULTS", "/home/ruiyi/livemacro/Result
 sys.path.insert(0, str(TOOLS))
 from update_site import (  # noqa: E402
     BETTING_ANCHOR, BETTING_CUMULATIVE_HIDDEN, BETTING_CUTOFF, BETTING_DROPPED,
-    BETTING_LABELS, BETTING_LINES, BETTING_MARKETS, BETTING_MIN_DAYS, _window_of,
+    BETTING_LABELS, BETTING_LINES, BETTING_MARKETS, BETTING_MIN_DAYS, BETTING_RESUMES, _window_of,
 )
 
 fails = 0
@@ -222,6 +222,20 @@ def main() -> int:
                 lost[model] = set(order[bad:])
                 print(f"  note {label}: {model} loses {order[bad:]} (cutoff {cutoff:%Y-%m-%d})")
 
+        # a member that resumes a line after an outage joins this market only once
+        # its own kept bets here span BETTING_MIN_DAYS (update_site.BETTING_RESUMES)
+        held: set[str] = set()
+        for arm in BETTING_RESUMES:
+            ds = [bm[arm] for seg, bm in seg_bets.items()
+                  if arm in bm and win_of[seg][0] not in lost.get(arm, set())]
+            if ds:
+                ts = pd.concat(ds)["datetime_utc"]
+                span = (ts.max() - ts.min()) / day
+                if span < BETTING_MIN_DAYS:
+                    held.add(arm)
+                    print(f"  note {label}: {arm} held off ({span:.1f} d of its own bets, "
+                          f"minimum {BETTING_MIN_DAYS:g})")
+
         # successions (BETTING_LINES): one line per model and its successor. Built
         # here from the raw bets, independently of update_site's stitched-row
         # merge: a member's bets count from its own instant to the next member's,
@@ -230,9 +244,10 @@ def main() -> int:
         line_bets: dict[str, dict[str, pd.DataFrame]] = {}
         for seg, bm in seg_bets.items():
             w = win_of[seg][0]
-            kept = {m: d for m, d in bm.items() if w not in lost.get(m, set())}
+            kept = {m: d for m, d in bm.items() if w not in lost.get(m, set()) and m not in held}
             for line, members in BETTING_LINES.items():
-                present = [(a, t) for a, t in members if any(a in b for b in seg_bets.values())]
+                present = [(a, t) for a, t in members
+                           if a not in held and any(a in b for b in seg_bets.values())]
                 if len(present) < 2:
                     continue
                 parts = []

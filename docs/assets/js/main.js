@@ -440,6 +440,24 @@ function lineChart(mount, spec) {
         'stroke-linejoin': 'round', 'stroke-linecap': 'round',
       }));
     });
+    // an interior run of nulls in a betting curve is a model outage (no valid
+    // nowcasts): bridge it with a thin dashed segment in the line's colour, so the
+    // line reads as one model with a gap rather than two
+    if (s.bridge) {
+      let prev = null;
+      s.values.forEach((v, i) => {
+        if (v === null || !isFinite(v)) return;
+        if (prev !== null && i - prev > 1) {
+          const part = (s.parts || []).filter(p => p.from <= i).pop();
+          svg.appendChild(el('line', {
+            x1: X(s.x0 + prev), y1: Y(s.values[prev]), x2: X(s.x0 + i), y2: Y(v),
+            stroke: part ? part.color : s.color, 'stroke-width': 1.6,
+            'stroke-dasharray': '3 4', 'stroke-linecap': 'round',
+          }));
+        }
+        prev = i;
+      });
+    }
     if (lastY !== null) labels.push({ y: lastY, name: s.name, color: s.color });
   });
 
@@ -596,12 +614,12 @@ function renderBettingCharts(b) {
       const handovers = [...new Set(v.series.filter(s => s.note).map(s => s.note))];
       cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(v.tail)}`
         + (handovers.length
-          ? ` A line that changes colour is one bankroll carried over to the successor model: ${esc(handovers.join('; '))}.`
+          ? ` Each line keeps one bankroll across a change of model; a colour change marks a successor, a dashed stretch a model outage: ${esc(handovers.join('; '))}.`
           : '');
       lineChart(box, {
         series: v.series.map(s => ({
           name: s.name, x0: s.start, values: s.values,
-          dash: s.kind === 'human', color: colorFor(s),
+          dash: s.kind === 'human', color: colorFor(s), bridge: true,
           parts: s.parts ? s.parts.map(p => ({
             from: p.from, name: p.name,
             color: SERIES_COLORS[p.name] || colorFor(s) })) : null,

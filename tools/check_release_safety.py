@@ -158,7 +158,11 @@ SERIES_NOTE_MAX = 160
 _NOTE_NAME = r"[A-Za-z][A-Za-z0-9.()' -]{0,47}?"
 _NOTE_CLAUSE = (rf"{_NOTE_NAME} until (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
                 rf"\d{{1,2}}, 20\d\d, then {_NOTE_NAME}")
-SERIES_NOTE_RE = re.compile(rf"^{_NOTE_CLAUSE}(?:; {_NOTE_CLAUSE})*$")
+# a member that resumes a line after an outage (update_site.BETTING_RESUMES)
+_NOTE_RESUME = (rf"{_NOTE_NAME} resumes (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
+                rf"\d{{1,2}}, 20\d\d; dashed where it has no valid nowcasts")
+_NOTE_ANY = rf"(?:{_NOTE_CLAUSE}|{_NOTE_RESUME})"
+SERIES_NOTE_RE = re.compile(rf"^{_NOTE_ANY}(?:; {_NOTE_ANY})*$")
 
 S = str
 N = (int, float)
@@ -429,7 +433,8 @@ def check_series() -> None:
             if "note" in c and not (isinstance(c["note"], str) and len(c["note"]) <= SERIES_NOTE_MAX
                                     and SERIES_NOTE_RE.match(c["note"])):
                 fail(f"data/series.json curve {c.get('name')!r} ({where}): `note` must be a short "
-                     f"hand-over sentence ('<model> until <Mon d, yyyy>, then <model>'; <= {SERIES_NOTE_MAX} chars)")
+                     f"hand-over sentence ('<model> until <Mon d, yyyy>, then <model>' or '<model> resumes <Mon d, "
+                     f"yyyy>; dashed where it has no valid nowcasts'; <= {SERIES_NOTE_MAX} chars)")
             if len(vals) > SERIES_MAX_LEN:
                 fail(f"data/series.json curve {c.get('name')!r} ({where}): "
                      f"{len(vals)} points exceeds the {SERIES_MAX_LEN} cap")

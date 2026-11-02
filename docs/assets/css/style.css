@@ -363,13 +363,15 @@ footer .sep { color: var(--border); padding: 0 4px; }
      the arms with no predecessor take hues the others leave free. Chosen by a
      constrained search on OKLab separation (normal vision and simulated
      protan/deutan) against every line they share a chart with. */
-  --s-gpt6:          #59a196;   /* GPT-5's teal, lighter */
+  --s-gpt6:          #03595a;   /* GPT-5's teal, darker: a visible step (dE 16.5) */
   --s-sonnet5:       #b6433c;   /* Sonnet 4.5's orange, deeper */
   --s-sonnet5-tool:  #94206b;   /* the plug-in arm's rose, deeper */
   --s-sonnet5-multi: #b4620b;   /* the multi-agent arm's gold, deeper */
+  /* the two GPT-6 agent arms are off LiveBetting since 2026-11-02 (plain models only);
+     re-pick these before drawing them again -- multi now shares DeepSeek's azure */
   --s-gpt6-tool:     #1a52a1;
   --s-gpt6-multi:    #268beb;
-  --s-deepseek:      #33373d;
+  --s-deepseek:      #268beb;   /* azure: clear of the darker GPT-6 teal */
   --grid: #e6e9ee;
 }
 @media (prefers-color-scheme: dark) {
@@ -383,13 +385,13 @@ footer .sep { color: var(--border); padding: 0 4px; }
     --s-brown:   #c9a179;
     --s-grey:    #9aa1ad;
     --s-rose:    #d489a8;
-    --s-gpt6:          #5b9384;
+    --s-gpt6:          #0b787a;
     --s-sonnet5:       #da5535;
     --s-sonnet5-tool:  #ee5ba0;
     --s-sonnet5-multi: #f0be62;
     --s-gpt6-tool:     #4e82e6;
     --s-gpt6-multi:    #74bfff;
-    --s-deepseek:      #c9ced6;
+    --s-deepseek:      #2971e5;
     --grid: #2a2f38;
   }
 }

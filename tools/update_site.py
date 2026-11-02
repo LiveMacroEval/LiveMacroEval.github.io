@@ -340,7 +340,10 @@ BETTING_CUTOFF = {
 # its kept windows only, so it would stop with its last clean window while the
 # others run on, and its "final" would not be comparable (user decision
 # 2026-09-06, reverting the 2026-09-05 trial that showed it truncated). The
-# quarter tabs are like-for-like windows, so Qwen stays there.
+# quarter tabs are like-for-like windows, so Qwen stays there. Since 2026-11-02
+# this holds the export ids only: where the OpenRouter arm resumes Qwen3-235B's
+# line (BETTING_RESUMES, below) the merged line is drawn on the cumulative chart,
+# dashed across the outage; Qwen3-80B has no successor and stays off it.
 BETTING_CUMULATIVE_HIDDEN: set[str] = set(BETTING_CUTOFF)
 
 # A model and its successor are ONE LiveBetting line on one bankroll (user decision
@@ -377,9 +380,17 @@ BETTING_LINES: dict[str, tuple[tuple[str, dt.datetime | None], ...]] = {
 }
 # the line takes the scored model's name: the score tables merge the two Qwen ids too
 BETTING_LABELS.setdefault("qwen3-235b-a22b-2507-openrouter", "Qwen3-235B")
-for _line, _members in BETTING_LINES.items():
-    if any(a in BETTING_CUMULATIVE_HIDDEN for a, _t in _members):
-        BETTING_CUMULATIVE_HIDDEN.add(_line)
+# Members that RESUME a line after an outage -- a stretch with no valid nowcasts
+# -- rather than continuing it (user decision 2026-11-02). Qwen3-235B's valid
+# results are the collaborator's export before its Jul 5 cut and the project's own
+# OpenRouter run from Sep 5; the export ended on Jul 27, so the broken stretch is
+# Jul 5 - 27 and the line has nothing valid until Sep 5. Such a member joins a
+# market only once ITS OWN bets there span BETTING_MIN_DAYS, like any new arm (the
+# line's earlier bets do not count towards it); until then the market shows the
+# export alone, off the cumulative chart as before. Once it joins, the line is on
+# the cumulative chart too, its outage drawn as a dashed bridge (null values in
+# the curve) and named in the caption.
+BETTING_RESUMES: set[str] = {"qwen3-235b-a22b-2507-openrouter"}
 
 
 def _et_day(ts: dt.datetime) -> dt.date:
@@ -387,10 +398,17 @@ def _et_day(ts: dt.datetime) -> dt.date:
 
 
 def _line_note(members: list[tuple[str, dt.datetime | None]]) -> str:
-    """'GPT-5 until Sep 4, 2026, then GPT-6 Astra' for the members a curve spans."""
+    """'GPT-5 until Sep 4, 2026, then GPT-6 Astra' for the members a curve spans;
+    'Qwen3-235B resumes Sep 5, 2026; dashed where it has no valid nowcasts' for a
+    member that resumes the line after an outage."""
     out = []
     for (a, _t), (b, since) in zip(members, members[1:]):
         la, lb = betting_label(a), betting_label(b)
+        if b in BETTING_RESUMES:
+            first = _et_day(since)
+            out.append(f"{lb} resumes {MONTH_NAMES[first.month - 1]} {first.day}, {first.year}; "
+                       f"dashed where it has no valid nowcasts")
+            continue
         if la == lb:
             continue
         last = _et_day(since) - dt.timedelta(days=1)
@@ -728,6 +746,14 @@ def _curve(arm: str, cell: dict[int, tuple[float, float, str]]) -> dict:
             owner = cell[d][2]
         values.append(last)
         owners.append(owner)
+    # a member that resumes the line after an outage: the days between the last
+    # bet before it and its own first bet hold no valid nowcast, so they are null
+    # (the page bridges them with a dashed segment) rather than carried forward
+    for j in range(1, len(owners)):
+        if owners[j] in BETTING_RESUMES and owners[j - 1] != owners[j]:
+            i = max(d for d in cell if d < lo + j) - lo
+            for k in range(i + 1, j):
+                values[k] = None
     out = {
         # a line's curve is named after the newest model in it: a quarter tab that
         # holds only the predecessor's bets shows the predecessor
@@ -813,6 +839,16 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                 if keep:
                     rows_by_arm[arm] = keep
                 else:
+                    del rows_by_arm[arm]
+        # a member that resumes a line after an outage joins this market only once
+        # its own bets here span BETTING_MIN_DAYS (BETTING_RESUMES)
+        for arm in BETTING_RESUMES:
+            rows = rows_by_arm.get(arm)
+            if rows:
+                stamps = [row[5] for row in rows]
+                span = (max(stamps) - min(stamps)).total_seconds() / 86400.0
+                if span < BETTING_MIN_DAYS:
+                    BETTING_HELD.setdefault(label, {})[arm] = round(span, 1)
                     del rows_by_arm[arm]
         # a model and its successor become one line (BETTING_LINES), after the cut
         # above and before the hold-off below, which then applies to the line
