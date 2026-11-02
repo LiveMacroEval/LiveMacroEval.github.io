@@ -144,6 +144,21 @@ SERIES_MAX_CURVES = 20        # per market, and per quarter within a market (ros
 SERIES_MAX_MONTHS = 24        # per market; the tabs are quarters, so six years
 SERIES_BETTING_DP = 1         # betting values rounded to 0.1pp
 SERIES_CASE_DP = 3
+# A LiveBetting line that carries one model's bankroll on to its successor
+# (update_site.BETTING_LINES, 2026-11-02) names the model each stretch of its
+# values belongs to: `parts` = [{"name", "from"}], `from` an index into the
+# curve's own `values`, plus one `note` naming the hand-over day. Labels and one
+# index per model switch -- nothing a series could ride along in. Held to that
+# shape exactly: at most SERIES_MAX_PARTS parts, names no longer than a display
+# name, indices strictly increasing from 0 inside the curve, and a note that is a
+# short sentence of words and a date.
+SERIES_MAX_PARTS = 4
+SERIES_NAME_MAX = 48
+SERIES_NOTE_MAX = 160
+_NOTE_NAME = r"[A-Za-z][A-Za-z0-9.()' -]{0,47}?"
+_NOTE_CLAUSE = (rf"{_NOTE_NAME} until (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
+                rf"\d{{1,2}}, 20\d\d, then {_NOTE_NAME}")
+SERIES_NOTE_RE = re.compile(rf"^{_NOTE_CLAUSE}(?:; {_NOTE_CLAUSE})*$")
 
 S = str
 N = (int, float)
@@ -390,11 +405,31 @@ def check_series() -> None:
             fail(f"data/series.json {where}: {len(curves)} curves exceeds "
                  f"{SERIES_MAX_CURVES}")
         for c in curves:
-            extra = set(c) - {"name", "kind", "start", "values"}
+            extra = set(c) - {"name", "kind", "start", "values", "parts", "note"}
             if extra:
                 fail(f"data/series.json curve {c.get('name')!r} ({where}): "
                      f"unexpected key(s) {sorted(extra)}")
             vals = c.get("values", [])
+            if "parts" in c:
+                parts = c["parts"]
+                ok = isinstance(parts, list) and 2 <= len(parts) <= SERIES_MAX_PARTS
+                prev = -1
+                for p in parts if ok else []:
+                    if not (isinstance(p, dict) and set(p) == {"name", "from"}
+                            and isinstance(p["name"], str) and 0 < len(p["name"]) <= SERIES_NAME_MAX
+                            and isinstance(p["from"], int) and not isinstance(p["from"], bool)
+                            and prev < p["from"] < max(len(vals), 1)):
+                        ok = False
+                        break
+                    prev = p["from"]
+                if not ok or parts[0].get("from") != 0:
+                    fail(f"data/series.json curve {c.get('name')!r} ({where}): `parts` must be "
+                         f"2-{SERIES_MAX_PARTS} {{name, from}} entries, `from` strictly increasing "
+                         f"from 0 inside the curve")
+            if "note" in c and not (isinstance(c["note"], str) and len(c["note"]) <= SERIES_NOTE_MAX
+                                    and SERIES_NOTE_RE.match(c["note"])):
+                fail(f"data/series.json curve {c.get('name')!r} ({where}): `note` must be a short "
+                     f"hand-over sentence ('<model> until <Mon d, yyyy>, then <model>'; <= {SERIES_NOTE_MAX} chars)")
             if len(vals) > SERIES_MAX_LEN:
                 fail(f"data/series.json curve {c.get('name')!r} ({where}): "
                      f"{len(vals)} points exceeds the {SERIES_MAX_LEN} cap")

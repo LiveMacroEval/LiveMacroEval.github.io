@@ -291,6 +291,15 @@ const SERIES_COLORS = {
   // the pipeline draws this arm in a pale apricot that has no contrast on
   // white, and purple and slate are Qwen's, which shares these charts
   'Sonnet 4.5 w. tool': 'var(--s-rose)',
+  // September 2026: a successor is a shade of its predecessor, so a line that
+  // carries one bankroll across the switch changes colour but not family
+  'GPT-6 Astra': 'var(--s-gpt6)',
+  'Sonnet 5': 'var(--s-sonnet5)',
+  'Sonnet 5 w. tool': 'var(--s-sonnet5-tool)',
+  'Sonnet 5 w. multi-agent': 'var(--s-sonnet5-multi)',
+  'GPT-6 Astra w. tool': 'var(--s-gpt6-tool)',
+  'GPT-6 Astra w. multi-agent': 'var(--s-gpt6-multi)',
+  'DeepSeek V4 Flash': 'var(--s-deepseek)',
 };
 const BASELINE_COLORS = ['var(--s-blue)', 'var(--s-olive)', 'var(--s-brown)', 'var(--s-grey)'];
 
@@ -402,21 +411,35 @@ function lineChart(mount, spec) {
   }
 
   const labels = [];
+  // A series may carry `parts` ([{from, name, color}], from = index into its
+  // values): one line whose model changed. Each stretch is drawn in its own
+  // colour and starts at the previous stretch's last point, so the line stays
+  // one consecutive curve.
+  const stretches = s => s.parts && s.parts.length > 1
+    ? s.parts.map((p, k) => ({
+        lo: k ? p.from - 1 : 0,
+        hi: k + 1 < s.parts.length ? s.parts[k + 1].from - 1 : s.values.length - 1,
+        color: p.color }))
+    : [{ lo: 0, hi: s.values.length - 1, color: s.color }];
   spec.series.forEach(s => {
-    // a null breaks the path rather than drawing a straight line across a gap
-    let d = '', pen = false, lastY = null;
-    s.values.forEach((v, i) => {
-      if (v === null || !isFinite(v)) { pen = false; return; }
-      const px = X(s.x0 + i), py = Y(v);
-      d += (pen ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
-      pen = true; lastY = py;
+    let lastY = null;
+    stretches(s).forEach(st => {
+      // a null breaks the path rather than drawing a straight line across a gap
+      let d = '', pen = false;
+      for (let i = st.lo; i <= st.hi; i++) {
+        const v = s.values[i];
+        if (v === null || !isFinite(v)) { pen = false; continue; }
+        const px = X(s.x0 + i), py = Y(v);
+        d += (pen ? 'L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1) + ' ';
+        pen = true; lastY = py;
+      }
+      if (!d) return;
+      svg.appendChild(el('path', {
+        d, fill: 'none', stroke: st.color, 'stroke-width': s.dash ? 2 : 2.4,
+        'stroke-dasharray': s.dash ? '6 4' : null,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
     });
-    if (!d) return;
-    svg.appendChild(el('path', {
-      d, fill: 'none', stroke: s.color, 'stroke-width': s.dash ? 2 : 2.4,
-      'stroke-dasharray': s.dash ? '6 4' : null,
-      'stroke-linejoin': 'round', 'stroke-linecap': 'round',
-    }));
     if (lastY !== null) labels.push({ y: lastY, name: s.name, color: s.color });
   });
 
@@ -475,15 +498,19 @@ function lineChart(mount, spec) {
         dots[k].setAttribute('opacity', 0);
         return;
       }
+      // a line whose model changed: the point belongs to the part holding it
+      const part = (s.parts || []).filter(p => p.from <= i).pop();
+      const name = resting || !part ? s.name : part.name;
+      const color = resting || !part ? s.color : part.color;
       if (resting) {
         dots[k].setAttribute('opacity', 0);
       } else {
         dots[k].setAttribute('cx', X(xv));
         dots[k].setAttribute('cy', Y(v));
-        dots[k].setAttribute('fill', s.color);
+        dots[k].setAttribute('fill', color);
         dots[k].setAttribute('opacity', 1);
       }
-      rows.push({ name: s.name, color: s.color, v });
+      rows.push({ name, color, v });
     });
     if (!rows.length) return false;
     rows.sort((a, b) => b.v - a.v);
@@ -565,11 +592,19 @@ function renderBettingCharts(b) {
 
     function draw() {
       const v = views.find(x => x.key === active) || views[0];
-      cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(v.tail)}`;
+      // a line that changed model says when, under the chart it is drawn on
+      const handovers = [...new Set(v.series.filter(s => s.note).map(s => s.note))];
+      cap.innerHTML = `<b>${esc(m.label)}</b> — ${esc(v.tail)}`
+        + (handovers.length
+          ? ` A line that changes colour is one bankroll carried over to the successor model: ${esc(handovers.join('; '))}.`
+          : '');
       lineChart(box, {
         series: v.series.map(s => ({
           name: s.name, x0: s.start, values: s.values,
           dash: s.kind === 'human', color: colorFor(s),
+          parts: s.parts ? s.parts.map(p => ({
+            from: p.from, name: p.name,
+            color: SERIES_COLORS[p.name] || colorFor(s) })) : null,
         })),
         height: 300, yInclude: 0,
         alt: `LiveBetting return on ${m.label}, by model and baseline`,

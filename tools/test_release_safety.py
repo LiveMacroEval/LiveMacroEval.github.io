@@ -267,6 +267,46 @@ def m_series_too_many_months(d: Path):
                     for i in range(SERIES_MAX_MONTHS + 1)]
     _write_series(d, o)
 
+# ---- succession lines (2026-11-02): a curve may name the model behind each
+# stretch of its values (`parts`) and the hand-over day (`note`). Neither may
+# become a side channel for numbers.
+
+def _first_curve(o: dict) -> dict:
+    return o["betting"]["markets"][0]["series"][0]
+
+def m_series_parts_values(d: Path):
+    """Per-bet values hidden inside a part."""
+    o = _series(d)
+    c = _first_curve(o)
+    c["parts"] = [{"name": "GPT-5", "from": 0, "bets": [0.31, 0.29, 0.33]},
+                  {"name": "GPT-6 Astra", "from": 1}]
+    _write_series(d, o)
+
+def m_series_parts_per_day(d: Path):
+    """A 'part' per day: the index list becomes a second series."""
+    o = _series(d)
+    c = _first_curve(o)
+    c["parts"] = [{"name": f"p{i}", "from": i} for i in range(len(c["values"]))]
+    _write_series(d, o)
+
+def m_series_parts_out_of_range(d: Path):
+    o = _series(d)
+    c = _first_curve(o)
+    c["parts"] = [{"name": "GPT-5", "from": 0}, {"name": "GPT-6 Astra", "from": len(c["values"]) + 500}]
+    _write_series(d, o)
+
+def m_series_note_numbers(d: Path):
+    """A note carrying a run of numbers."""
+    o = _series(d)
+    _first_curve(o)["note"] = "GPT-5 until Sep 4; " + ", ".join(f"{3.1 + i * 0.01:.2f}" for i in range(40))
+    _write_series(d, o)
+
+def m_series_note_markup(d: Path):
+    o = _series(d)
+    _first_curve(o)["note"] = "GPT-5 until Sep 4 <script>fetch('x')</script>"
+    _write_series(d, o)
+
+
 def m_month_row_extra_field(d: Path):
     """leaderboard.json: a raw value added to a period tab's model row."""
     p = d / "data/leaderboard.json"
@@ -335,6 +375,11 @@ CASES = [
     ("series.json: per-bet detail in a month curve", m_series_month_extra_key, "unexpected key"),
     ("series.json: prices smuggled into a month block", m_series_month_block_extra_key, "unexpected key"),
     ("series.json: a month tab per resolution",    m_series_too_many_months, "months exceeds"),
+    ("series.json: values hidden in a curve part",  m_series_parts_values, "`parts` must be"),
+    ("series.json: a curve part per day",           m_series_parts_per_day, "`parts` must be"),
+    ("series.json: a part index past the curve",    m_series_parts_out_of_range, "`parts` must be"),
+    ("series.json: numbers in a curve note",        m_series_note_numbers, "`note` must be"),
+    ("series.json: markup in a curve note",         m_series_note_markup, "`note` must be"),
     ("leaderboard.json: raw value in a period row", m_month_row_extra_field, "unknown key"),
     ("leaderboard.json: a period tab per release", m_month_panels_per_release, "exceeds the 30 cap"),
     ("leaderboard.json: per-field values in a theme row", m_theme_period_extra_field, "unknown key"),

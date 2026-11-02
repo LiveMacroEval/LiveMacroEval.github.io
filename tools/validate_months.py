@@ -41,7 +41,7 @@ RESULTS = Path(os.environ.get("LIVEMACRO_RESULTS", "/home/ruiyi/livemacro/Result
 sys.path.insert(0, str(TOOLS))
 from update_site import (  # noqa: E402
     BETTING_ANCHOR, BETTING_CUMULATIVE_HIDDEN, BETTING_CUTOFF, BETTING_DROPPED,
-    BETTING_LABELS, BETTING_MARKETS, BETTING_MIN_DAYS, _window_of,
+    BETTING_LABELS, BETTING_LINES, BETTING_MARKETS, BETTING_MIN_DAYS, _window_of,
 )
 
 fails = 0
@@ -188,21 +188,29 @@ def main() -> int:
             win_t0[w] = min(win_t0.get(w, seg_first[seg]), seg_first[seg])
 
         # ---- per arm, per window: invested, value, last bet
-        per: dict[str, dict[str, dict]] = {}
-        for seg, bm in seg_bets.items():
-            w = win_of[seg][0]
-            for model, df in bm.items():
-                cell = per.setdefault(model, {}).setdefault(w, {"inv": 0.0, "val": 0.0,
-                                                                  "first": None, "last": None})
-                cell["inv"] += float(df["bet_amount"].sum())
-                cell["val"] += float(df.loc[df["is_winning_bet"].astype(bool), "shares_bought"].sum())
-                cell["first"] = df["datetime_utc"].iloc[0] if cell["first"] is None \
-                    else min(cell["first"], df["datetime_utc"].iloc[0])
-                cell["last"] = df["datetime_utc"].iloc[-1] if cell["last"] is None \
-                    else max(cell["last"], df["datetime_utc"].iloc[-1])
+        def aggregate(bets_by_seg: dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, dict]]:
+            out: dict[str, dict[str, dict]] = {}
+            for seg, bm in bets_by_seg.items():
+                w = win_of[seg][0]
+                for model, df in bm.items():
+                    cell = out.setdefault(model, {}).setdefault(w, {"inv": 0.0, "val": 0.0,
+                                                                     "first": None, "last": None,
+                                                                     "owners": []})
+                    cell["inv"] += float(df["bet_amount"].sum())
+                    cell["val"] += float(df.loc[df["is_winning_bet"].astype(bool), "shares_bought"].sum())
+                    cell["first"] = df["datetime_utc"].iloc[0] if cell["first"] is None \
+                        else min(cell["first"], df["datetime_utc"].iloc[0])
+                    cell["last"] = df["datetime_utc"].iloc[-1] if cell["last"] is None \
+                        else max(cell["last"], df["datetime_utc"].iloc[-1])
+                    cell["owners"].append(df[["datetime_utc", "owner"]] if "owner" in df
+                                          else df[["datetime_utc"]].assign(owner=model))
+            return out
+
+        per = aggregate(seg_bets)
 
         # the cutoff rule, applied to the raw windows: an arm with a cutoff
         # loses the first window holding a bet at or after it and all later ones
+        lost: dict[str, set[str]] = {}
         for model, cutoff in BETTING_CUTOFF.items():
             wins = per.get(model)
             if not wins:
@@ -211,12 +219,41 @@ def main() -> int:
             bad = next((i for i, w in enumerate(order)
                         if wins[w]["last"] >= pd.Timestamp(cutoff)), None)
             if bad is not None:
-                dropped = order[bad:]
-                for w in dropped:
-                    del wins[w]
-                print(f"  note {label}: {model} loses {dropped} (cutoff {cutoff:%Y-%m-%d})")
-                if not wins:
-                    del per[model]
+                lost[model] = set(order[bad:])
+                print(f"  note {label}: {model} loses {order[bad:]} (cutoff {cutoff:%Y-%m-%d})")
+
+        # successions (BETTING_LINES): one line per model and its successor. Built
+        # here from the raw bets, independently of update_site's stitched-row
+        # merge: a member's bets count from its own instant to the next member's,
+        # after its cutoff windows are gone; the line's window totals are plain
+        # sums of those bets.
+        line_bets: dict[str, dict[str, pd.DataFrame]] = {}
+        for seg, bm in seg_bets.items():
+            w = win_of[seg][0]
+            kept = {m: d for m, d in bm.items() if w not in lost.get(m, set())}
+            for line, members in BETTING_LINES.items():
+                present = [(a, t) for a, t in members if any(a in b for b in seg_bets.values())]
+                if len(present) < 2:
+                    continue
+                parts = []
+                for k, (arm, since) in enumerate(present):
+                    until = present[k + 1][1] if k + 1 < len(present) else None
+                    d = kept.pop(arm, None)
+                    if d is None:
+                        continue
+                    if since is not None:
+                        d = d[d["datetime_utc"] >= pd.Timestamp(since)]
+                    if until is not None:
+                        d = d[d["datetime_utc"] < pd.Timestamp(until)]
+                    if not d.empty:
+                        parts.append(d.assign(owner=arm))
+                if parts:
+                    kept[line] = pd.concat(parts).sort_values("datetime_utc", kind="mergesort")
+            line_bets[seg] = kept
+        per = aggregate(line_bets)
+        for model in list(per):
+            if not per[model]:
+                del per[model]
 
         # the hold-off rule, applied to the raw bets: an arm whose kept bets in
         # this market span less than BETTING_MIN_DAYS is not published here yet
@@ -238,8 +275,25 @@ def main() -> int:
               f"{label}: windows {win_order} match the published tabs")
         cum = {c["name"]: final(c) for c in sm["series"]}
 
+        def newest(owners: list[pd.DataFrame]) -> str:
+            o = pd.concat(owners).sort_values("datetime_utc", kind="mergesort")
+            return o["owner"].iloc[-1]
+
+        def first_part_days(owners: list[pd.DataFrame], t0) -> list[tuple[str, int]]:
+            """(display name, first day it owns) along a curve whose day d shows the
+            last bet of day d -- what update_site writes as the curve's `parts`."""
+            o = pd.concat(owners).sort_values("datetime_utc", kind="mergesort")
+            o = o.assign(day=((o["datetime_utc"] - t0) // day).astype(int))
+            last = o.groupby("day")["owner"].last()
+            out = []
+            for d, m in last.items():
+                if not out or out[-1][0] != label_of(m):
+                    out.append((label_of(m), int(d)))
+            return out
+
         for model, wins in per.items():
-            name = label_of(model)
+            owners_all = [o for c in wins.values() for o in c["owners"]]
+            name = label_of(newest(owners_all))
             tot_inv = sum(c["inv"] for c in wins.values())
             tot_val = sum(c["val"] for c in wins.values())
             r_cum = (tot_val - tot_inv) / tot_inv * 100.0
@@ -254,22 +308,27 @@ def main() -> int:
                       f"{label:17s} {name:26s} leaderboard table {table[label].get(name)}")
             for w, c in wins.items():
                 r_w = (c["val"] - c["inv"]) / c["inv"] * 100.0
-                curve = next((s for s in pub_months[w]["series"] if s["name"] == name), None)
+                wname = label_of(newest(c["owners"]))
+                curve = next((s for s in pub_months[w]["series"] if s["name"] == wname), None)
                 n_curves += 1
                 ok = curve is not None and abs(final(curve) - r_w) <= 0.05 + 1e-9
-                check(ok, f"{label:17s} {name:26s} {w}: {r_w:+9.1f}%  site "
+                check(ok, f"{label:17s} {wname:26s} {w}: {r_w:+9.1f}%  site "
                           f"{final(curve) if curve else None}")
                 if curve is not None:
                     d0 = int((c["first"] - win_t0[w]) // day)
                     d1 = int((c["last"] - win_t0[w]) // day)
                     check(curve["start"] == d0 and len(curve["values"]) == d1 - d0 + 1,
-                          f"{label:17s} {name:26s} {w}: spans days {d0}..{d1}")
+                          f"{label:17s} {wname:26s} {w}: spans days {d0}..{d1}")
+                    want = [(n, d - d0) for n, d in first_part_days(c["owners"], win_t0[w])]
+                    got = [(p["name"], p["from"]) for p in curve.get("parts", [])] or [(curve["name"], 0)]
+                    check(got == want, f"{label:17s} {wname:26s} {w}: parts {want}")
         # nothing published that the raw files do not support
-        raw_names = {label_of(m) for m in per if m not in BETTING_CUMULATIVE_HIDDEN}
+        raw_names = {label_of(newest([o for c in per[m].values() for o in c["owners"]]))
+                     for m in per if m not in BETTING_CUMULATIVE_HIDDEN}
         check(set(cum) == raw_names, f"{label}: published cumulative arms == arms with kept bets")
         for w, mo in pub_months.items():
             pub = {s["name"] for s in mo["series"]}
-            raw = {label_of(m) for m, wins in per.items() if w in wins}
+            raw = {label_of(newest(wins[w]["owners"])) for m, wins in per.items() if w in wins}
             check(pub == raw, f"{label} {w}: published arms == arms with kept bets")
 
     print(f"\n{n_curves} curves recomputed from raw bets; "

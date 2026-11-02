@@ -57,6 +57,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 TOOLS = Path(__file__).resolve().parent         # <repo>/tools
 REPO = TOOLS.parent                             # <repo>  (public)
@@ -334,6 +335,96 @@ BETTING_CUTOFF = {
 # quarter tabs are like-for-like windows, so Qwen stays there.
 BETTING_CUMULATIVE_HIDDEN: set[str] = set(BETTING_CUTOFF)
 
+# A model and its successor are ONE LiveBetting line on one bankroll (user decision
+# 2026-11-02: "first GPT-5 and then GPT-6, with 2 colors in one consecutive line";
+# keep the charts to a few lines). Each line lists its members in order with the
+# instant (UTC) from which a member's bets are the line's: the predecessor's bets
+# before it, the successor's from it on, so where both bet the newer model's bets
+# are used. The line is named after its newest member with bets in the view, and
+# changes colour where the member changes (the curve's `parts`). A line with a
+# single member present is that arm, untouched -- which keeps every drop before
+# the September 2026 roster byte-identical. The Jul 5 cut above applies to the
+# collaborator's Qwen export only, before the merge: the OpenRouter arm is the same
+# model run on the project's servers, so its bets are the line's from Sep 5.
+_ET = ZoneInfo("America/New_York")
+BETTING_LINES: dict[str, tuple[tuple[str, dt.datetime | None], ...]] = {
+    # the plain arms: the API arms retired on 2026-09-05 00:00 ET, when the
+    # Codex / Claude Code plain arms started (2026-09-05 04:00 UTC)
+    "gpt-6-astra-codex-plain": (("gpt-5-search-api", None),
+                                ("gpt-6-astra-codex-plain", dt.datetime(2026, 9, 5, 4))),
+    "claude-code-plain": (("claude-sonnet-4.5", None),
+                          ("claude-code-plain", dt.datetime(2026, 9, 5, 4))),
+    # the agent arms switched model at their 2026-09-04 00:00 ET rows (the private
+    # pipeline's ARM_SPLITS instant)
+    "claude-code-agent-sonnet5": (("claude-code-agent", None),
+                                  ("claude-code-agent-sonnet5", dt.datetime(2026, 9, 4, 4))),
+    "claude-code-multiagent-sonnet5": (("claude-code-multiagent", None),
+                                       ("claude-code-multiagent-sonnet5", dt.datetime(2026, 9, 4, 4))),
+    # one model (the score tables already score it as one arm): the export until
+    # its Jul 5 cut, the OpenRouter arm from 2026-09-05
+    "qwen3-235b-a22b-2507-openrouter": (("qwen3-235b-a22b-instruct-2507", None),
+                                        ("qwen3-235b-a22b-2507-openrouter", dt.datetime(2026, 9, 5, 4))),
+}
+# the line takes the scored model's name: the score tables merge the two Qwen ids too
+BETTING_LABELS.setdefault("qwen3-235b-a22b-2507-openrouter", "Qwen3-235B")
+for _line, _members in BETTING_LINES.items():
+    if any(a in BETTING_CUMULATIVE_HIDDEN for a, _t in _members):
+        BETTING_CUMULATIVE_HIDDEN.add(_line)
+
+
+def _et_day(ts: dt.datetime) -> dt.date:
+    return ts.replace(tzinfo=dt.timezone.utc).astimezone(_ET).date()
+
+
+def _line_note(members: list[tuple[str, dt.datetime | None]]) -> str:
+    """'GPT-5 until Sep 4, 2026, then GPT-6 Astra' for the members a curve spans."""
+    out = []
+    for (a, _t), (b, since) in zip(members, members[1:]):
+        la, lb = betting_label(a), betting_label(b)
+        if la == lb:
+            continue
+        last = _et_day(since) - dt.timedelta(days=1)
+        out.append(f"{la} until {MONTH_NAMES[last.month - 1]} {last.day}, {last.year}, then {lb}")
+    return "; ".join(out)
+
+
+def _merge_line(rows_by_arm: dict[str, list[tuple]], line: str, where: str) -> None:
+    """Replace a line's member arms in `rows_by_arm` by the line, in place.
+
+    Rows are (x, segment, cumulative profit, cumulative invested, return %, ts,
+    member). Each member keeps only its own rows in [its instant, the next
+    member's), and its running totals are re-based so the line's bankroll is one
+    continuous sum: profit = profit at the hand-over + the member's own profit
+    since. The rows of the first member are returned as they came."""
+    present = [(a, t) for a, t in BETTING_LINES[line] if rows_by_arm.get(a)]
+    if len(present) < 2:
+        return
+    merged: list[tuple] = []
+    base_p = base_i = 0.0
+    for k, (arm, since) in enumerate(present):
+        until = present[k + 1][1] if k + 1 < len(present) else None
+        rows = sorted(rows_by_arm.pop(arm), key=lambda t: t[0])
+        keep = [j for j, r in enumerate(rows)
+                if (since is None or r[5] >= since) and (until is None or r[5] < until)]
+        if not keep:
+            continue
+        if keep != list(range(keep[0], keep[-1] + 1)):
+            sys.exit(f"{where}: {arm}'s bets in its part of the {line} line are not "
+                     f"contiguous on the chart axis")
+        ref_p, ref_i = (rows[keep[0] - 1][2], rows[keep[0] - 1][3]) if keep[0] else (0.0, 0.0)
+        for j in keep:
+            x, seg, p, i, ret, ts, _m = rows[j]
+            if base_p == base_i == ref_p == ref_i == 0.0:
+                merged.append(rows[j])
+                continue
+            pp, ii = base_p + (p - ref_p), base_i + (i - ref_i)
+            merged.append((x, seg, pp, ii, pp / ii * 100.0, ts, arm))
+        base_p, base_i = merged[-1][2], merged[-1][3]
+    xs = [r[0] for r in merged]
+    if xs != sorted(xs):
+        sys.exit(f"{where}: the members of the {line} line interleave on the chart axis")
+    rows_by_arm[merged[-1][6]] = merged
+
 
 def _apply_editorial(path: str) -> None:
     """Pin the editorial settings of an earlier publication.
@@ -523,7 +614,8 @@ def read_betting(betting_dir: Path) -> list[dict]:
     """Final cumulative return per arm, per market: the last point of each
     published cumulative curve, so the table and the chart cannot disagree."""
     return [{"label": m["label"],
-             "rows": [{"name": c["name"], "kind": c["kind"], "ret": _final(c)}
+             "rows": [dict({"name": c["name"], "kind": c["kind"], "ret": _final(c)},
+                           **({"note": c["note"]} if c.get("note") else {}))
                       for c in m["series"]]}
             for m in read_betting_series(betting_dir)]
 
@@ -602,25 +694,47 @@ def _window_of(market_key: str, tag: str, first_bet: dt.datetime | None) -> tupl
     return key, label
 
 
-def _curve(arm: str, cell: dict[int, tuple[float, float]]) -> dict:
-    """One published curve from {day -> (x, value)}. A day with no bet carries
-    the previous value forward: a cumulative return does not move without a
-    new bet, so the line stays flat there rather than breaking (the breaks
-    the earlier null-for-no-bet rendering drew were read as data gaps)."""
+def _curve(arm: str, cell: dict[int, tuple[float, float, str]]) -> dict:
+    """One published curve from {day -> (x, value, member arm)}. A day with no
+    bet carries the previous value forward: a cumulative return does not move
+    without a new bet, so the line stays flat there rather than breaking (the
+    breaks the earlier null-for-no-bet rendering drew were read as data gaps).
+
+    A BETTING_LINES line whose curve spans two models also carries `parts` --
+    the display name each stretch of `values` belongs to, from index `from` on,
+    so the page can change the line's colour at the hand-over -- and a `note`
+    naming the hand-over day."""
     days = sorted(cell)
     lo, hi = days[0], days[-1]
-    values = []
-    last = 0.0
+    values, owners = [], []
+    last, owner = 0.0, cell[lo][2]
     for d in range(lo, hi + 1):
         if d in cell:
             last = round(cell[d][1], 1) or 0.0   # "or 0.0" turns -0.0 into 0.0
+            owner = cell[d][2]
         values.append(last)
-    return {
-        "name": betting_label(arm),
+        owners.append(owner)
+    out = {
+        # a line's curve is named after the newest model in it: a quarter tab that
+        # holds only the predecessor's bets shows the predecessor
+        "name": betting_label(owners[-1]),
         "kind": "human" if _is_human(arm) else "llm",
         "start": lo,
         "values": values,
     }
+    parts: list[dict] = []
+    for i, m in enumerate(owners):
+        name = betting_label(m)
+        if not parts or parts[-1]["name"] != name:
+            parts.append({"name": name, "from": i})
+    if len(parts) > 1:
+        out["parts"] = parts
+    seen = list(dict.fromkeys(owners))
+    if arm in BETTING_LINES and len(seen) > 1:
+        note = _line_note([(a, t) for a, t in BETTING_LINES[arm] if a in seen])
+        if note:
+            out["note"] = note
+    return out
 
 
 def _final(curve: dict) -> float:
@@ -665,7 +779,7 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
             rows_by_arm.setdefault(arm, []).append((
                 float(r["stitched_x_days"]), r["segment"],
                 float(r["cumulative_profit"]), float(r["cumulative_invested"]),
-                float(r["cumulative_return_pct"]), ts,
+                float(r["cumulative_return_pct"]), ts, arm,
             ))
         # an arm with a cutoff loses the first window holding a bet at or
         # after it, and every window after that (the window is read off the
@@ -675,7 +789,7 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
             if not rows:
                 continue
             rows.sort(key=lambda t: t[0])
-            wins = [_window_of(key, seg, ts)[0] for _x, seg, _p, _i, _r, ts in rows]
+            wins = [_window_of(key, seg, ts)[0] for _x, seg, _p, _i, _r, ts, _m in rows]
             bad = next((i for i, (row, w) in enumerate(zip(rows, wins))
                         if row[5] >= cutoff), None)
             if bad is not None:
@@ -686,6 +800,10 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                     rows_by_arm[arm] = keep
                 else:
                     del rows_by_arm[arm]
+        # a model and its successor become one line (BETTING_LINES), after the cut
+        # above and before the hold-off below, which then applies to the line
+        for line in BETTING_LINES:
+            _merge_line(rows_by_arm, line, path.name)
         # an arm whose kept bets span less than BETTING_MIN_DAYS is held off this
         # market for now (validate_months applies the same rule to the raw bets)
         for arm in list(rows_by_arm):
@@ -699,7 +817,7 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
         seg_lo: dict[str, float] = {}
         seg_first: dict[str, dt.datetime] = {}
         for rows in rows_by_arm.values():
-            for x, seg, _p, _i, _ret, ts in rows:
+            for x, seg, _p, _i, _ret, ts, _m in rows:
                 if seg not in seg_lo or x < seg_lo[seg]:
                     seg_lo[seg] = x
                 if seg not in seg_first or ts < seg_first[seg]:
@@ -721,15 +839,15 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
         day = dt.timedelta(days=SERIES_BETTING_STEP_DAYS)
         for arm, rows in rows_by_arm.items():
             rows.sort(key=lambda t: t[0])
-            cell: dict[int, tuple[float, float]] = {}
-            win_cells: dict[str, dict[int, tuple[float, float]]] = {}
+            cell: dict[int, tuple[float, float, str]] = {}
+            win_cells: dict[str, dict[int, tuple[float, float, str]]] = {}
             cur = None
             p0 = i0 = last_p = last_i = 0.0
-            for x, seg, profit, invested, ret, ts in rows:
+            for x, seg, profit, invested, ret, ts, member in rows:
                 d = int(x // SERIES_BETTING_STEP_DAYS)
                 # last observation within the day wins
                 if d not in cell or x > cell[d][0]:
-                    cell[d] = (x, ret)
+                    cell[d] = (x, ret, member)
                 w = win_of[seg]
                 if w != cur:
                     # a new window: re-base on the running totals at its start
@@ -742,7 +860,7 @@ def read_betting_series(betting_dir: Path) -> list[dict]:
                 wd = int((ts - win_t0[w]) // day)
                 wc = win_cells.setdefault(w, {})
                 if wd not in wc or x > wc[wd][0]:
-                    wc[wd] = (x, wret)
+                    wc[wd] = (x, wret, member)
             if arm not in BETTING_CUMULATIVE_HIDDEN:
                 cumulative.append(_curve(arm, cell))
             for w, wc in win_cells.items():
