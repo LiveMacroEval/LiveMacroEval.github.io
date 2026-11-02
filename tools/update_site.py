@@ -307,9 +307,17 @@ BETTING_LABELS = {
 BETTING_MIN_DAYS = 14
 BETTING_HELD: dict[str, dict[str, float]] = {}   # market -> arm -> days so far (printed by main)
 
-# Arms never drawn on the LiveBetting charts. Empty: both Claude Code arms are
-# drawn, and the Qwen arms are handled by the cutoff below rather than dropped.
-BETTING_DROPPED: set[str] = set()
+# Arms never drawn on the LiveBetting charts. Since 2026-11-02 LiveBetting shows
+# the plain models only (user decision: "drop the with tool and with multi agent
+# in the betting -- just the plain models"): the tool and multi-agent
+# configurations are compared on the leaderboard and the agent-design card, and
+# on the charts they doubled the line count. The Qwen arms are handled by the
+# cutoff below rather than dropped.
+BETTING_DROPPED: set[str] = {
+    "claude-code-agent", "claude-code-multiagent",                    # Sonnet 4.5 w. tool / w. multi-agent
+    "claude-code-agent-sonnet5", "claude-code-multiagent-sonnet5",    # Sonnet 5 w. tool / w. multi-agent
+    "gpt-6-astra-codex-agent", "gpt-6-astra-codex-multiagent",        # GPT-6 Astra w. tool / w. multi-agent
+}
 
 # Both Qwen arms changed regime on 2026-07-05 -- a synchronised upstream change
 # to their job (HAZARD 2 in the private UPDATE_PIPELINE.md) that moved every
@@ -355,7 +363,9 @@ BETTING_LINES: dict[str, tuple[tuple[str, dt.datetime | None], ...]] = {
     "claude-code-plain": (("claude-sonnet-4.5", None),
                           ("claude-code-plain", dt.datetime(2026, 9, 5, 4))),
     # the agent arms switched model at their 2026-09-04 00:00 ET rows (the private
-    # pipeline's ARM_SPLITS instant)
+    # pipeline's ARM_SPLITS instant). Inert while BETTING_DROPPED holds them (a
+    # dropped arm's rows are never read); kept so the lines return whole if the
+    # agent arms are ever drawn again.
     "claude-code-agent-sonnet5": (("claude-code-agent", None),
                                   ("claude-code-agent-sonnet5", dt.datetime(2026, 9, 4, 4))),
     "claude-code-multiagent-sonnet5": (("claude-code-multiagent", None),
@@ -445,6 +455,10 @@ def _apply_editorial(path: str) -> None:
     if "dropped" in era:
         DROPPED.clear()
         DROPPED.update(era["dropped"])
+    # an era file without the key predates any LiveBetting drop (the set was empty
+    # until 2026-11-02), so the arms it published are all drawn
+    BETTING_DROPPED.clear()
+    BETTING_DROPPED.update(era.get("betting_dropped", []))
     MIN_SCORED_RELEASES = era.get("min_scored_releases", MIN_SCORED_RELEASES)
     MIN_SCORED_RELEASES_ALL = era.get("min_scored_releases_all", MIN_SCORED_RELEASES_ALL)
     BETTING_MIN_DAYS = era.get("betting_min_days", BETTING_MIN_DAYS)

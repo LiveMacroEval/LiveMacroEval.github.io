@@ -970,7 +970,7 @@
   "betting": {
     "title": "LiveBetting Score",
     "window": "Target windows Feb \u2013 Sep 2026; Q1 and Q2 and Q3 2026 for real GDP.",
-    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET until September 5, 2026; every four hours from 01:00 ET since September 6), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. A model and its successor are one line on one bankroll, which changes colour at the hand-over: GPT-5 until September 4, 2026, then GPT-6 Astra; Sonnet 4.5 until September 4, then Sonnet 5; the Sonnet 4.5 plug-in and multi-agent arms until September 3, then their Sonnet 5 versions. Where both bet on the same market, the successor's bets are used. The Qwen arms of the collaborator's export changed regime on July 5, 2026 (an upstream change to their job): a window holding any of their bets from that date on is not shown, nor any later window of the export. Qwen3-235B continues from September 5, 2026, run on the project's servers through OpenRouter. The Qwen lines are kept off the cumulative chart, where a curve with missing windows would not be comparable; their windows are in the quarter tabs.",
+    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET until September 5, 2026; every four hours from 01:00 ET since September 6), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. LiveBetting shows each model in its plain configuration; the tool and multi-agent configurations are compared on the leaderboard and in the tool-and-agent-design table. A model and its successor are one line on one bankroll, which changes colour at the hand-over: GPT-5 until September 4, 2026, then GPT-6 Astra; Sonnet 4.5 until September 4, then Sonnet 5. Where both bet on the same market, the successor's bets are used. The Qwen arms of the collaborator's export changed regime on July 5, 2026 (an upstream change to their job): a window holding any of their bets from that date on is not shown, nor any later window of the export. Qwen3-235B continues from September 5, 2026, run on the project's servers through OpenRouter. The Qwen lines are kept off the cumulative chart, where a curve with missing windows would not be comparable; their windows are in the quarter tabs.",
     "markets": [
       {
         "label": "Real GDP",
@@ -987,16 +987,6 @@
             "note": "GPT-5 until Sep 4, 2026, then GPT-6 Astra"
           },
           {
-            "name": "GPT-6 Astra w. tool",
-            "kind": "llm",
-            "ret": 63.2
-          },
-          {
-            "name": "GPT-6 Astra w. multi-agent",
-            "kind": "llm",
-            "ret": 62.7
-          },
-          {
             "name": "Atlanta Fed GDPNow",
             "kind": "human",
             "ret": 55.7
@@ -1008,21 +998,9 @@
             "note": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
-            "kind": "llm",
-            "ret": 49.6,
-            "note": "Sonnet 4.5 w. multi-agent until Sep 3, 2026, then Sonnet 5 w. multi-agent"
-          },
-          {
             "name": "NY Fed Staff Nowcast",
             "kind": "human",
             "ret": 38.8
-          },
-          {
-            "name": "Sonnet 5 w. tool",
-            "kind": "llm",
-            "ret": 15.1,
-            "note": "Sonnet 4.5 w. tool until Sep 3, 2026, then Sonnet 5 w. tool"
           },
           {
             "name": "DeepSeek V4 Flash",
@@ -1040,22 +1018,10 @@
             "ret": 15.7
           },
           {
-            "name": "Sonnet 5 w. tool",
-            "kind": "llm",
-            "ret": 3.4,
-            "note": "Sonnet 4.5 w. tool until Sep 3, 2026, then Sonnet 5 w. tool"
-          },
-          {
             "name": "Sonnet 5",
             "kind": "llm",
             "ret": -1.2,
             "note": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
-          },
-          {
-            "name": "Sonnet 5 w. multi-agent",
-            "kind": "llm",
-            "ret": -20.5,
-            "note": "Sonnet 4.5 w. multi-agent until Sep 3, 2026, then Sonnet 5 w. multi-agent"
           },
           {
             "name": "GPT-6 Astra",
@@ -1074,18 +1040,6 @@
             "ret": -1.4
           },
           {
-            "name": "Sonnet 5 w. multi-agent",
-            "kind": "llm",
-            "ret": -51.5,
-            "note": "Sonnet 4.5 w. multi-agent until Sep 3, 2026, then Sonnet 5 w. multi-agent"
-          },
-          {
-            "name": "Sonnet 5 w. tool",
-            "kind": "llm",
-            "ret": -51.6,
-            "note": "Sonnet 4.5 w. tool until Sep 3, 2026, then Sonnet 5 w. tool"
-          },
-          {
             "name": "GPT-6 Astra",
             "kind": "llm",
             "ret": -52.7,
@@ -1098,19 +1052,9 @@
             "note": "Sonnet 4.5 until Sep 4, 2026, then Sonnet 5"
           },
           {
-            "name": "GPT-6 Astra w. multi-agent",
-            "kind": "llm",
-            "ret": -76.8
-          },
-          {
             "name": "DeepSeek V4 Flash",
             "kind": "llm",
             "ret": -83.6
-          },
-          {
-            "name": "GPT-6 Astra w. tool",
-            "kind": "llm",
-            "ret": -92.2
           }
         ]
       }
