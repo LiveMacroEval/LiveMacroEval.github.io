@@ -340,10 +340,9 @@ BETTING_CUTOFF = {
 # its kept windows only, so it would stop with its last clean window while the
 # others run on, and its "final" would not be comparable (user decision
 # 2026-09-06, reverting the 2026-09-05 trial that showed it truncated). The
-# quarter tabs are like-for-like windows, so Qwen stays there. Since 2026-11-02
-# this holds the export ids only: where the OpenRouter arm resumes Qwen3-235B's
-# line (BETTING_RESUMES, below) the merged line is drawn on the cumulative chart,
-# dashed across the outage; Qwen3-80B has no successor and stays off it.
+# quarter tabs are like-for-like windows, so Qwen stays there. The merged
+# Qwen3-235B line (BETTING_RESUMES, below) is added here too while
+# BETTING_RESUME_ON_CUMULATIVE is off.
 BETTING_CUMULATIVE_HIDDEN: set[str] = set(BETTING_CUTOFF)
 
 # A model and its successor are ONE LiveBetting line on one bankroll (user decision
@@ -391,6 +390,16 @@ BETTING_LABELS.setdefault("qwen3-235b-a22b-2507-openrouter", "Qwen3-235B")
 # the cumulative chart too, its outage drawn as a dashed bridge (null values in
 # the curve) and named in the caption.
 BETTING_RESUMES: set[str] = {"qwen3-235b-a22b-2507-openrouter"}
+# ... but OFF on the cumulative chart for now (user, 2026-11-02: "the qwen dash looks
+# too long for now"): with two months of OpenRouter bets the dashed outage spans
+# most of the chart. A line holding a resuming member stays on the quarter tabs
+# only until this is switched on, e.g. once the OpenRouter run is a few quarters
+# long; the dashed bridge, the note and the validators are in place for that.
+BETTING_RESUME_ON_CUMULATIVE = False
+if not BETTING_RESUME_ON_CUMULATIVE:
+    for _line, _members in BETTING_LINES.items():
+        if any(a in BETTING_RESUMES for a, _t in _members):
+            BETTING_CUMULATIVE_HIDDEN.add(_line)
 
 
 def _et_day(ts: dt.datetime) -> dt.date:

@@ -970,7 +970,7 @@
   "betting": {
     "title": "LiveBetting Score",
     "window": "Target windows Feb \u2013 Sep 2026; Q1 and Q2 and Q3 2026 for real GDP.",
-    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET until September 5, 2026; every four hours from 01:00 ET since September 6), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. LiveBetting shows each model in its plain configuration; the tool and multi-agent configurations are compared on the leaderboard and in the tool-and-agent-design table. A model and its successor are one line on one bankroll, which changes colour at the hand-over: GPT-5 until September 4, 2026, then GPT-6 Astra; Sonnet 4.5 until September 4, then Sonnet 5. Where both bet on the same market, the successor's bets are used. The Qwen arms of the collaborator's export changed regime on July 5, 2026 (an upstream change to their job; the export ended on July 27): a window holding any of their bets from that date on is not shown, nor any later window of the export. Qwen3-235B resumes on September 5, 2026, run on the project's servers through OpenRouter, and rejoins a market once those new bets span at least 14 days, like any new model; on the cumulative chart its line is dashed across the stretch with no valid nowcasts, so its total covers fewer months than the others'. Qwen3-80B has no successor and appears in the quarter tabs only.",
+    "note": "Cumulative return on a stream of $1 bets placed at fixed times each day, one hour after the agents' scheduled runs (01:00 and 13:00 ET until September 5, 2026; every four hours from 01:00 ET since September 6), each on the bucket holding the agent's latest nowcast, ending at the official release. A slot is skipped when that nowcast is more than a day old; institutional nowcasts follow their own publication calendars and are not capped. Every market shown has an institutional nowcast to compare against. LiveBetting shows each model in its plain configuration; the tool and multi-agent configurations are compared on the leaderboard and in the tool-and-agent-design table. A model and its successor are one line on one bankroll, which changes colour at the hand-over: GPT-5 until September 4, 2026, then GPT-6 Astra; Sonnet 4.5 until September 4, then Sonnet 5. Where both bet on the same market, the successor's bets are used. The Qwen arms of the collaborator's export changed regime on July 5, 2026 (an upstream change to their job; the export ended on July 27): a window holding any of their bets from that date on is not shown, nor any later window of the export. Qwen3-235B resumes on September 5, 2026, run on the project's servers through OpenRouter, and rejoins a market's quarter tabs once those new bets span at least 14 days, like any new model. Both Qwen arms are kept off the cumulative chart for now: across the outage a Qwen total would cover fewer months than the others'.",
     "markets": [
       {
         "label": "Real GDP",
@@ -1001,12 +1001,6 @@
             "name": "NY Fed Staff Nowcast",
             "kind": "human",
             "ret": 38.8
-          },
-          {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": 16.8,
-            "note": "Qwen3-235B resumes Sep 5, 2026; dashed where it has no valid nowcasts"
           },
           {
             "name": "DeepSeek V4 Flash",
@@ -1050,12 +1044,6 @@
             "kind": "llm",
             "ret": -52.7,
             "note": "GPT-5 until Sep 4, 2026, then GPT-6 Astra"
-          },
-          {
-            "name": "Qwen3-235B",
-            "kind": "llm",
-            "ret": -64.6,
-            "note": "Qwen3-235B resumes Sep 5, 2026; dashed where it has no valid nowcasts"
           },
           {
             "name": "Sonnet 5",
